@@ -250,7 +250,7 @@ presta_init: function(cx) {
 	return false;
     },
 
-    // Выдать маленькое окно с алертом ( пока alert() ) и запретить на это время уходы со страницы
+    // Выдать окно с алертом ( пока alert() ) и запретить на это время уходы со страницы
     win_alert: function(s) {
 	DOT.erralert=true;
 	alert(s);
@@ -305,6 +305,9 @@ is_ah: function() { // это AssetHub ?
     DOT.daemon.assethub_id = 1337; // USDC — 1337 USDT — 1984
     DOT.daemon.assethub_tip = 0; // хуй знает чего, но 0
     DOT.daemon.assethub_name = "USDC";
+    // установка важных для assethub параметров:
+    DOT.chain.ss58Format = 0;
+    // DOT.chain.tokenSymbol = DOT.daemon.assethub_name; // "USDC"
     return DOT.daemon.assethub_id;
 },
 
@@ -369,20 +372,20 @@ daemon_get_info: async function() {
 	if(cp && (cp=cp.toHuman()) ) DOT.chain.existentialDeposit = parseInt(cp.minBalance); // minBalance 70,000
     } else {
 	cp = await DOT.api.rpc.system.properties();
-        // ss58Format
-        if(cp.ss58Format || cp.ss58Format===0) DOT.chain.ss58Format=parseInt( cp.ss58Format );
-        // try to get Decimals
-        var x;
-	if(cp.tokenDecimals && ( x=cp.tokenDecimals.toHuman() ) && x[0] ) DOT.chain.tokenDecimals=parseInt(x[0]);
+	if(!cp || !(cp=cp.toHuman())) return DOT.error("Chain toHuman");
+	// tokenDecimals == null | [ "10" ]
+	if(cp.tokenDecimals && cp.tokenDecimals[0] && 1*cp.tokenDecimals[0] ) DOT.chain.tokenDecimals = 1*cp.tokenDecimals[0];
 	// chain name "DOT"
-	if(cp.tokenSymbol && (x=cp.tokenSymbol.toHuman()) && x[0]) DOT.chain.tokenSymbol = x[0];
+	DOT.chain.name = DOT.chain.tokenSymbol = (cp.tokenSymbol && cp.tokenSymbol[0] ? cp.tokenSymbol[0] : 'XZ');
+        // ss58Format
+	DOT.chain.ss58Format = 1 * cp.ss58Format; // если null, то и будет 0
 	// величина депозита
 	DOT.chain.existentialDeposit = parseInt( await DOT.api.consts.balances.existentialDeposit );
     }
 
     if(	DOT.chain.tokenDecimals ) { // и если удалось принять Decimals
 	DOT.chain.mul = 10 ** DOT.chain.tokenDecimals;
-	if(DOT.daemon.mul && DOT.daemon.mul != DOT.chain.mul) return DOT.error('Set KALATORI_DECIMALS="'+DOT.chain.tokenDecimals+'" in daemon config!');
+	if(DOT.daemon.mul && DOT.daemon.mul != DOT.chain.mul) return DOT.error('Mismatch decimals:\n\ndaemon.mul:\n'+DOT.daemon.mul+'\n\nchain.mul:\n'+DOT.chain.mul);
     } else { // а иначе берем тот, что прислал демон, если он есть, конечно
 	if(!DOT.daemon.mul) return DOT.error('Empty daemon.mul and tokenDecimals both!');
         DOT.chain.mul = DOT.daemon.mul;
@@ -606,17 +609,20 @@ progress: {
     },
 
 
-    Balance: async function(destination) {
-	var ah=DOT.is_ah();
-	if(ah) { // AssetHub!!!
-	    var e = await DOT.api.query.assets.account( ah, destination );
-	    if(!e || !e.toHuman || !(e=e.toHuman())) return 0;
-	    e=(''+e.balance).replace(/,/g,''); // "995,000,000" СУКИ ЖЕ ВЫ НЕДОЁБАНЫЕ ПИДАРАСЫ ТРИЖДЫБЛЯДСКИЕ ПИЗДА У ВАС ВМЕСТО МОЗГА ВЫ О ЧЕМ ВООБЩЕ ДУМАЛИ, ОТДАВАЯ ВМЕСТО ЧИСЛА ЕБУЧУЮ СТРОКУ С ЗАПЯТЫМИ?!
-	    return parseInt(e);
+    Balance: async function(west) {
+	var e,ah=DOT.is_ah();
+	try {
+	    if(ah) { // AssetHub!!!
+		e = await DOT.api.query.assets.account( ah, west );
+		return 1*e.toJSON().balance;
+	    } else { // Polkadot
+		e = await DOT.api.query.system.account( west );
+		return 1*e.data.free.toLocaleString();
+	    }
+	} catch(er) {
+	    console.log(er);
+	    return '';
 	}
-	// transfer
-	var e = await DOT.api.query.system.account( destination );
-	return e.data.free;
     },
 
     payWithPolkadot: async function(json,SENDER, price, destination, wss) {
@@ -627,7 +633,7 @@ progress: {
 
 	const injector = await polkadotExtensionDapp.web3FromAddress(SENDER);
 
-	DOT.Transfer(destination, price).signAndSend(SENDER,
+	DOT.hash = await DOT.Transfer(destination, price).signAndSend(SENDER,
 	    DOT.add_ah({signer: injector.signer})
 	, ({ status }) => {
             if(!DOT.progress.id) DOT.progress.run(0,
@@ -635,11 +641,25 @@ progress: {
 			DOT.error('Error: timeout');
 			setTimeout(DOT.progress.stop,800);
 		    }); // start progressbar
+
+
+// eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+//	    console.log('-----------------------------------');
+//	    if(!DOT.a) DOT.a=[];
+//	    DOT.a.push(status);
+//	    console.log(status);
+//	    console.log('-----------------------------------['+DOT.a.length+']');
+
 	    if(status.isInBlock || status.type == 'InBlock') {
 		DOT.Talert("Status: isInBlock Completed #" + DOT.h( status.asInBlock.toString() ) );
+		try {
+		    var x=status.asInBlock.toString();
+		    if(x) DOT.hash=x;
+		} catch(er){}
 		// if(DOT.debug) DOT.Talert("Balance: " + (await DOT.Balance(destination)) );
 	    } else if(status.isFinalized || status.type == 'Finalized') {
-		DOT.Talert("Status: Finalized");
+		try { DOT.hash = status.asFinalized.toString(); } catch(er) { console.log(er); }
+		DOT.Talert("Status: Finalized "+DOT.hash);
 		DOT.progress.stop();
 		return DOT.payment_done( destination );
 	    } else {
@@ -650,10 +670,11 @@ progress: {
 	    DOT.disconnect();
 	    DOT.error('transaction failed: '+error);
         });
+
     },
 
     payment_done: async function( destination ) {
-	DOT.Talert('payment_done');
+	DOT.Talert('payment_done: '+DOT.hash);
 
 	if(!destination) destination = DOT.pay_account;
 	else {
@@ -911,8 +932,8 @@ progress: {
 
     // Top up pay_account from Alice for 1/3 of summ (DOT.debug=1 or 'zymologia.fi' present in url)
     topUpPay: async function() {
-	document.querySelectorAll('.DOT_'+addr).forEach((e)=>{ e.innerHTML=DOT.ajaximg(); });
-	DOT.topUpFromAlice( DOT.pay_account, DOT.total_planks / 3 );
+	document.querySelectorAll('.DOT_'+DOT.pay_account).forEach((e)=>{ e.innerHTML=DOT.ajaximg(); });
+	DOT.hash = await DOT.topUpFromAlice( DOT.pay_account, DOT.total_planks / 3 );
     },
 
     // Top up Balance from Alice for test sites (DOT.debug=1 or 'zymologia.fi' present in url)
@@ -935,21 +956,20 @@ progress: {
 	console.debug('DOT .connected, keyring:');
 	var keyring = new polkadotKeyring.Keyring({ type: 'sr25519' });
 
-    if(!DOT.alice) {
-	console.debug("DOT.alice start generating pair for Alice");
-	var d=Date.now();
+	if(!DOT.alice) {
+	    console.debug("DOT.alice start generating pair for Alice");
+	    var d=Date.now();
+	    // DOT.alice = keyring.addFromUri('//Alice'); // КРИВОРУКИЕ БЛЯТЬ, 40 СЕКУНД!!! СОРОК СЕКУНД ГЕНЕРИТЬ КЛЮЧ АЛИСЫ В Firefox!!!
+	    DOT.alice = keyring.addFromSeed(polkadotUtil.hexToU8a("0xe5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a"));
+	    d=Math.round((Date.now()-d)/1000);
+	    console.debug('DOT.alice pair ready: '+d+' second: '+DOT.alice.address);
+	    if(d>5) console.debug('БЛЯТЬ ЕБАНЫЕ ПИДАРАСЫ, КАК ЖЕ ОНО ТОРМОЗИТ!');
+	}
 
-	// DOT.alice = keyring.addFromUri('//Alice'); // КРИВОРУКИЕ БЛЯТЬ, 40 СЕКУНД!!! СОРОК СЕКУНД ГЕНЕРИТЬ КЛЮЧ АЛИСЫ В Firefox!!!
-	DOT.alice = keyring.addFromSeed(polkadotUtil.hexToU8a("0xe5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a"));
-
-	d=Math.round((Date.now()-d)/1000);
-	console.debug('DOT.alice pair ready: '+d+' second: '+DOT.alice.address);
-	if(d>5) console.debug('БЛЯТЬ ЕБАНЫЕ ПИДАРАСЫ, КАК ЖЕ ОНО ТОРМОЗИТ!');
-    }
-
-	const hash = await DOT.Transfer(addr, value).signAndSend(DOT.alice);
+	var hash = await DOT.Transfer(addr, value).signAndSend(DOT.alice);
 	console.debug('DOT.alice hash: '+hash);
 	DOT.Talert('Transaction sent with hash '+hash);
+	return hash.toHex();
     },
 
     navigator: function(){ // get Browser' name
@@ -977,13 +997,12 @@ progress: {
 	document.querySelectorAll('.DOT_'+west).forEach((e)=>{ e.innerHTML=DOT.ajaximg(); });
 	// пошли качать баланс
 	if(DOT.api) {
-	    DOT.Balance(west).then((l) => { DOT.setBalance(west,l) });
+	    DOT.Balance(west).then((l) => { DOT.setBalance( west, l ) });
 	}
     },
 
     // баланс известен, обновить его на странице всюду
     setBalance: function(west,bal) {
-
 	if(west==DOT.pay_account) DOT.pay_balance=bal; // Если это наш баланс, то сохранить
 	document.querySelectorAll('.DOT_'+west).forEach((e)=>{
 	    e.innerHTML=DOT.ajaximg();
@@ -1065,73 +1084,22 @@ progress: {
 
 	// и подписались на события изменения баланса
 	DOT.api.query.system.events((events) => {
-
-    events.forEach(({ event, phase }) => {
-     // console.log(`\tEEEEEEEEEEEEEE: ${event.section}:${event.method}:: (phase=${phase.toString()})`);
-
-        var [from, to, amount] = event.data;
-    from = (from && from.toString ? DOT.west(from.toString()):false);
-    to = (to && to.toString ? DOT.west(to.toString()):false);
-    amount = (amount && amount.toString ? parseInt(amount.toString()):false);
-
-    console.log(
-"\nfrom("+typeof(from)+") = "+from
-+"\nto("+typeof(to)+") = "+to
-+"\namount("+typeof(amount)+") = "+amount
-);
-
-	    if(from) DOT.getBalance(from);
-	    if(to) DOT.getBalance(to);
-	    if(DOT.onBalance && to) DOT.onBalance(from,to,amount); // to === YOUR_TARGET_ACCOUNT_ADDRESS
-
-
-    //  console.log(`\t\t${event.meta.documentation.toString()}`);
-//      event.data.forEach((data, index) => {
-//        console.log(`\t\t\t${event.typeDef[index].type}: ${data.toString()}`);
-//      });
-    });
-
-//    system:ExtrinsicSuccess:: (phase={"applyExtrinsic":2}) DOT.js:1022:15
-//    {"weight":"SpWeightsWeightV2Weight",
-// "class":"FrameSupportDispatchDispatchClass",
-// "paysFee":"FrameSupportDispatchPays"}: {"weight":{"refTime":658678000,"proofSize":6208},"class":"Normal","paysFee":"Yes"}
-
-
-/*
-
-         events.forEach(({ event }) => {
-
-
-          if(DOT.api.events.balances.Transfer.is(event) || DOT.api.events.balances.Deposit.is(event)) {
+	  events.forEach(({ event, phase }) => {
+	    // console.log(`\tEEEEEEEEEEEEEE: ${event.section}:${event.method}:: (phase=${phase.toString()})`);
             var [from, to, amount] = event.data;
-	    from = (from && from.toString ? DOT.west(from.toString()):false);
-	    to = (to && to.toString ? DOT.west(to.toString()):false);
-	    amount = (amount && amount.toString ? parseInt(amount.toString()):false);
-	    if(from) DOT.getBalance(from);
-	    if(to) DOT.getBalance(to);
-	    if(DOT.onBalance && to) DOT.onBalance(from,to,amount); // to === YOUR_TARGET_ACCOUNT_ADDRESS
-          }
-
-         });
-*/
-
+            from = (from && from.toString ? DOT.west(from.toString()):false);
+            to = (to && to.toString ? DOT.west(to.toString()):false);
+            amount = (amount && amount.toString ? parseInt(amount.toString()):false);
+        	//     console.log(
+		// "\nfrom("+typeof(from)+") = "+from
+		// +"\nto("+typeof(to)+") = "+to
+		// +"\namount("+typeof(amount)+") = "+amount
+		// );
+		if(from) DOT.getBalance(from);
+		if(to) DOT.getBalance(to);
+		if(DOT.onBalance && to) DOT.onBalance(from,to,amount); // to === YOUR_TARGET_ACCOUNT_ADDRESS
+	  });
 	});
-
-/*
-if(!DOT.api.query.assets.Issued) alert('NO;');
-DOT.api.query.assets.Issued((events) => {
-    console.log(`Received ${events.length} asset issuance events:`);
-
-    events.forEach(({ event, phase }) => {
-      console.log(`\t${event.section}:${event.method}:: (phase=${phase.toString()})`);
-      console.log(`\t\t${event.meta.documentation.toString()}`);
-
-      event.data.forEach((data, index) => {
-        console.log(`\t\t\t${event.typeDef[index].type}: ${data.toString()}`);
-      });
-    });
- });
-*/
 
     },
 

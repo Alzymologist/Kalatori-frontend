@@ -21,6 +21,7 @@ chain: { // тут будет инфо, запрошенное от блокче
     tokenSymbol: "ERR",
     existentialDeposit: false, // 1*defaultMul,
     partialFee: false, // 0.02*defaultMul,
+    hashTemplate: "https://polkadot.subscan.io/extrinsic/"; // https://assethub-polkadot.subscan.io/extrinsic/
 },
 
 cx: {}, // а тут инфо от магазина
@@ -303,11 +304,10 @@ selected_acc: function() {
 is_ah: function() { // это AssetHub ?
     if( DOT.daemon.wss.indexOf('-ah') < 0 ) return false;
     DOT.daemon.assethub_id = 1337; // USDC — 1337 USDT — 1984
-    DOT.daemon.assethub_tip = 0; // хуй знает чего, но 0
-    DOT.daemon.assethub_name = "USDC";
-    // установка важных для assethub параметров:
+    DOT.daemon.assethub_tip = 0; // 0 или приказываю дать татарам мзды за срочность транзации
+    DOT.chain.tokenSymbol = DOT.daemon.assethub_name = "USDC";
     DOT.chain.ss58Format = 0;
-    // DOT.chain.tokenSymbol = DOT.daemon.assethub_name; // "USDC"
+    DOT.chain.hashTemplate = "https://assethub-polkadot.subscan.io/extrinsic/";
     return DOT.daemon.assethub_id;
 },
 

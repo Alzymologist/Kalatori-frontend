@@ -7,6 +7,33 @@ console.log("  |____/ \\__,_|\\___|_| |_| |_|\\___/|_| |_|  \\___/  |____/\n\n")
 // npm install socket.io
 // npm i @polkadot/api
 
+
+var supported_currencies=[
+  {
+    "currency": "DOT",
+    "chain_name": "polkadot",
+    "kind": "native",
+    "decimals": 10,
+    "rpc_url": "wss://rpc.polkadot.io"
+  },
+  {
+    "currency": "USDT",
+    "chain_name": "assethub-polkadot",
+    "kind": "asset",
+    "asset_id": 1984,
+    "decimals": 6,
+    "rpc_url": "wss://assethub-polkadot-rpc.polkadot.io"
+  },
+  {
+    "currency": "USDC",
+    "chain_name": "assethub-polkadot",
+    "kind": "asset",
+    "asset_id": 1337,
+    "decimals": 6,
+    "rpc_url": "wss://assethub-polkadot-rpc.polkadot.io"
+  }
+];
+
 document={
    getElementById: function() { return { innerHTML: "" }; },
    querySelector: function() { return { innerHTML: "" }; },
@@ -20,13 +47,19 @@ DOT.D={
   transferAll: async function(pair, to) { to=DOT.west(to);
     console.log(`[!] TransferAll from ${pair.west} to ${to}`);
     const transfer = DOT.api.tx.balances.transferAll(to, false);
-    const hash = await transfer.signAndSend(pair);
-    console.log(`[!] Transaction sent with hash: ${hash}`);
-    return hash;
+    try {
+        const hash = await transfer.signAndSend(pair);
+	      console.log(`[!] Transaction sent with hash: ${hash}`);
+	      return hash;
+    } catch(er) {
+	      console.log(`[!] Error transaction: ${er}`);
+    }
+    return false;
   },
     //  var hash = await DOT.topUpFromAlice(pay_acc,DOT.chain.total_planks);
 
   pay_acc: function(order) {
+   try {
     var keyring = new polkadotKeyring.Keyring({ type: 'sr25519' });
     var pair = keyring.addFromMnemonic(DOT.daemon.seed)
       .derive("/"+DOT.daemon.destination)
@@ -34,6 +67,10 @@ DOT.D={
     var public = pair.publicKey;
     pair.pub0x = "0x"+Buffer.from(public).toString('hex');
     pair.west = DOT.west(pair.pub0x);
+   } catch(er) {
+    	console.log(`[!] Error: ${er}`);
+	    return false;
+   }
     return pair;
   },
 
@@ -54,14 +91,17 @@ DOT.D={
     // Сперва проверим, не было ли уже оплаты
     var s = await DOT.D.read(pay_acc, BasePaid);
     if(s) {
-      console.log("Already paid: "+s);
-      return {result: "paid", balance: 'unknown', date: s.split(' ')[1], hash: s.split(' ')[2], payment: "old"};
+      console.log("Already paid (BasePaid): "+s);
+      return {result: "paid", date: s.split(' ')[1], amount: s.split(' ')[2], hash: s.split(' ')[3], payment: "old"};
     }
 
     // Ладно, проверим баланс
-    await DOT.connect();
-    var balance = await DOT.Balance(pay_acc);
-
+    try {
+	      await DOT.connect();
+	      var balance = await DOT.Balance(pay_acc);
+    } catch(er) {
+	      return {error: ''+er};
+    }
     // Пишем логи
     DOT.D.save(DOT.D.date()+" "+pay_acc+" "+total+" "+order_id, BaseWait);
 
@@ -69,16 +109,10 @@ DOT.D={
       return {result: "waiting", balance: balance};
     }
 
-    var s = await DOT.D.read(pay_acc, BasePaid);
-    if(s) {
-        console.log("Already paid: "+s);
-        return {result: "paid", balance: balance, date: s.split(' ')[1], hash: s.split(' ')[2], payment: "paid"};
-    }
-
     var s = await DOT.D.read(pay_acc, BaseTran);
     if(s) {
-        console.log("Already transfered: "+s);
-        return {result: "paid", balance: balance, date: s.split(' ')[1], payment: "process"};
+        console.log("Already transfered (BaseTran): "+s);
+        return {result: "paid", balance: balance, date: s.split(' ')[1], amount: s.split(' ')[2], payment: "process"};
     }
 
     // Опа, оплата готова, начинаем трансфер
@@ -88,13 +122,17 @@ DOT.D={
     var s = pay_acc+" "+DOT.D.date()+" "+total+" "+order_id;
     DOT.D.save(s, BaseTran);
     // Начать трансфер
-    var hash = await DOT.D.transferAll(pair, DOT.daemon.destination);
-    console.log("Now transfered, hash: "+hash);
-    // Пометить в пейд-базе
-    var s = pay_acc+" "+DOT.D.date()+" "+total+" "+hash+" "+order_id;
-    DOT.D.save(s, BasePaid);
+    try {
+        var hash = await DOT.D.transferAll(pair, DOT.daemon.destination);
+        console.log("Now transfered, hash: "+hash);
+        // Пометить в пейд-базе
+        var s = pay_acc+" "+DOT.D.date()+" "+total+" "+hash+" "+order_id;
+        DOT.D.save(s, BasePaid);
+    } catch(er) {
+	      return {error: ''+er};
+    }
 
-    return {result: "paid", balance: balance, date: s.split(' ')[1], hash: s.split(' ')[2], payment: "new"};
+    return {result: "paid", balance: balance, date: s.split(' ')[1], amount: s.split(' ')[2], hash: s.split(' ')[3], payment: "new"};
   },
 
 
@@ -129,9 +167,12 @@ DOT.daemon.seed = process.env['KALATORI_SEED']; // "bottom drive obey lake curta
 DOT.daemon.destination = process.env['KALATORI_DESTINATION']; // "0x7a8e3cbf653a65077179947e250892e579c8fb39167ec1ce26a4a6acbc5a0365"
 DOT.daemon.mulx = process.env['KALATORI_DECIMALS']; // 10
 DOT.daemon.mul = 10**process.env['KALATORI_DECIMALS']; // 1000000000
-"wss server seed destination mul".split(" ").forEach((v) => {
+DOT.daemon.remark = process.env['KALATORI_REMARK'];
+"wss server seed destination mul remark".split(" ").forEach((v) => {
     console.log("\t"+v+" = "+DOT.daemon[v]);
 });
+
+
 
 polkadotUtil = require('@polkadot/util');
 const { cryptoWaitReady } = require('@polkadot/util-crypto');
@@ -150,6 +191,24 @@ polkadotKeyring = require('@polkadot/keyring');
       console.log("\t mul = "+DOT.daemon.mul);
 })();
 
+
+var server_info={
+  version: "2.01 nodeJS LLeo",
+  instance_id: "cunning-garbo",
+  debug: true,
+  kalatori_remark: DOT.daemon.remark,
+  other: {
+    wss: DOT.chain.wss,
+    recipient: DOT.daemon.destination,
+    symbol: DOT.chain.symbol,
+    deposit: DOT.chain.deposit,
+    fee_planks: DOT.chain.fee_planks,
+    ss58: DOT.chain.ss58,
+    mul: DOT.daemon.mulx,
+  }
+};
+
+
 // File system
 const fs = require('fs');
 const readline = require('readline');
@@ -167,13 +226,117 @@ const port = DOT.daemon.server.split(':')[1]; // "0.0.0.0:16726"// 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// https://alzymologist.github.io/kalatori-api/
+//                           _
+//         ___    _ __    __| |   ___   _ __
+//        / _ \  | '__|  / _` |  / _ \ | '__|
+//       | (_) | | |    | (_| | |  __/ | |
+//        \___/  |_|     \__,_|  \___| |_|
+//
+app.get("/v2/order/*", async (req, res) => {
+
+    // Ещё какая-то йобань неизвестная
+    if(req.url.split("/")[4] == "forceWithdrawal") {
+        return res.status(200).send({result: "OK" });
+    }
+
+    // блять наркоманы,  половина данных GET, половина POST, как хуй на душу влезет
+    var order = req.url.split("/")[3]; // ID of order to track payments for
+    var amount = 1*req.query.amount; // (in selected currency; not in Plancks) This parameter can be skipped on subsequent requests
+    var currency = req.query.currency; // Currency (human-readable ticker, one of the values listed in the /status::supported_currencies) If no currency is specified, but amount is present, server will return error 400.
+    var currency_block = supported_currencies.find((v) => v.currency == currency);
+    var callback = req.query.callback; // "Меньше всего нужны мне твои каллбэки" (с) Земфира
+    var status = 443;
+
+    // Делаем наши проверки
+    var error = [];
+    if(!amount) error.push({"parameter": "amount", "message": "'amount' can't be blank if 'currency' is specified"});
+    if(!currency_block) error.push({"parameter": "currency", "message": "Currency is not not supported"});
+    if(error.length) return res.status(400).send(error);
+
+    // Делаем наши дела
+    var pair = DOT.D.pay_acc(order);
+    var payment_account = pair.west;
+    var r = await DOT.D.work(pair, amount, order);
+
+    // Проверяем amount
+    if(r.amount != amout) status = 409; // processed with different parameters (amount/currency), and cannot be updated
+    else {
+      if(r.payment == "old" || r.payment == "process" || r.payment == "new") status = 200; // exists
+      else if(!r.payment) status = 201; // created
+    }
+
+res.status(status).send({
+    hash: r.hash, // added by lleo
+  server_info: server_info,
+	order: order,
+	payment_status: (r.result=='waiting' ? "pending" : "paid"), // "Мы не можем похвастаться мудростью глаз и умелыми жестами рук" (с) Цой
+	"withdrawal_status": "waiting", // А ебитесь сами конями
+	payment_account: payment_account,
+	amount: amount,
+	currency: currency_block,
+	callback: callback,
+	recipient: DOT.daemon.destination,
+	"transactions": [
+	  {
+	    "block_number": 123456,
+	    "position_in_block": 1,
+	    timestamp: r.date.replace(/^(\d\d\d\d\-\d\d\-\d\d)\_(\d\d)\-(\d\d)\-(\d\d)$/g,"$1T$2:$3:$4Z"), // "2021-01-01T00:00:00Z",
+	    "transaction_bytes": "0x1234567890abcdef",
+	    "sender": "14Gjs1TD93gnwEBfDMHoCgsuf1s2TVKUP6Z1qKmAZnZ8cW5q",
+	    recipient: payment_account,
+	    amount: amount,
+	    currency: currency_block,
+	    status: (r.payment == "old" || r.payment == "new" ? "finalized" : "pending"),
+    }
+	  ],
+  });
+});
+
+
+//          _             _
+//    ___  | |_    __ _  | |_   _   _   ___
+//   / __| | __|  / _` | | __| | | | | / __|
+//   \__ \ | |_  | (_| | | |_  | |_| | \__ \
+//   |___/  \__|  \__,_|  \__|  \__,_| |___/
+//
+app.get("/v2/status", async (req, res) => {
+    res.status(200).send({
+      server_info: server_info,
+      supported_currencies: supported_currencies,
+    });
+});
+
+//      _                      _   _     _
+//     | |__     ___    __ _  | | | |_  | |__
+//     | '_ \   / _ \  / _` | | | | __| | '_ \
+//     | | | | |  __/ | (_| | | | | |_  | | | |
+//     |_| |_|  \___|  \__,_| |_|  \__| |_| |_|
+//
+app.get("/v2/health", async (req, res) => {
+    var a={}; for(var x of supported_currencies) { if(!a[x.rpc_url]) a[x.rpc_url]=x.chain_name; }
+    var connected_rpcs=[]; for(var x in a) connected_rpcs.push({ rpc_url:x, chain_name:a[x], status: "ok" });
+    res.status(200).send({
+	server_info: server_info,
+	connected_rpcs: connected_rpcs,
+	status: "ok"
+    });
+});
+
+
+
+
+
+
+
+
 
 app.get("/*", async (req, res) => {
-  console.log("New connect: "+req.url);
+  console.log("\n--------------------------\nNew user: "+req.url);
 
   var answer = {
       wss: DOT.chain.wss,
-      version: "1.02 nodeJS LLeo",
+      version: "1.03 nodeJS LLeo",
       recipient: DOT.daemon.destination,
       symbol: DOT.chain.symbol,
       deposit: DOT.chain.deposit,

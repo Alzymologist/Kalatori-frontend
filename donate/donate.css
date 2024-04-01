@@ -1,0 +1,467 @@
+#polkadot_work {
+/*    border: 1px solid #ccc;
+    background-color: white;
+*/
+    display:inline-block;
+}
+
+.t-account-title {
+    white-space: nowrap;
+    max-width: 90%;
+    overflow: hidden;
+}
+
+.topstick {
+    font-size:20px;
+    position:absolute;
+    top:0px;
+    left:0px;
+}
+
+/*
+#money, #button {
+    padding: 20px;
+    margin:5px;
+    border-radius:10px;
+    box-shadow: 4px 7px 16px 4px;
+}
+*/
+
+#polkadot_work, .kco-container {
+    z-index: 2;
+}
+
+.kco-label { white-space: nowrap; }
+
+.bg-polkadotjs,.bg-polkadotjs::after { background-color: var(--c-e-polkadotjs); }
+.bg-talisman,.bg-talisman::after { background-color: var(--c-e-talisman); }
+.bg-subwalletjs,.bg-subwalletjs::after { background-color: #d5e6ff; }
+.bg-01,.bg-01::after { background-color: #ece7ff; }
+.bg-02,.bg-02::after { background-color: #baf0d0; }
+.bg-03,.bg-03::after { background-color: #ead2af; }
+.bg-04,.bg-04::after { background-color: #f5d3fd; }
+.bg-05,.bg-05::after { background-color: #d2f4f4; }
+.bg-06,.bg-06::after { background-color: #fffcaf; }
+.bg-07,.bg-07::after { background-color: #ffd2d2; }
+.bg-09,.bg-09::after { background-color: #b9f2ab; }
+.bg-10,.bg-10::after { background-color: #ffe5ee; }
+
+
+
+
+
+
+/*************************************************/
+
+
+
+
+
+
+:root {
+    font-family: Inter, sans-serif;
+    font-feature-settings: 'liga' 1, 'calt' 1; /* fix for Chrome */
+
+    /* colors text, background, ecosystem */
+    --c-t: #222;
+    --c-t-secondary:#555;
+    --c-t-tertiary: #999;
+    --c-t-onBtn:    #FFF;
+    --c-t-account: #334048;
+    --c-b:          #FFF;
+    --c-b-btn:      #000;
+    --c-b-card:     #F1F5F6;
+    --c-b-card-hover:#E8E8F1;
+    --c-border:      rgba(0,0,0,0.1);
+    --c-e-polkadotjs:#FFD29D;
+    --c-e-talisman:  #DBF490;
+
+    /* font */
+    --fs-body: 15px;
+    --fs-body-small: 13px;
+    --fs-button: 15px;
+    --fw-button: 600;
+    --fs-price: 21px;
+    --fw-price: 600;
+    --fs-title: 16px;
+    --fw-title: 600;
+    --fs-title-small: 13px;
+    --fs-label: 13px;
+    --fw-label: 500;
+    --fs-account-title: 16px;
+    --fw-account-title: 600;
+    --fs-account-address: 12px;
+    --fs-account-balance: 13px;
+    --card-shadow: 0px 3px 2px 0px rgba(0, 0, 0, 0.02), 0px 6px 6px 0px rgba(0, 0, 0, 0.03), 0px 12px 12px 0px rgba(0, 0, 0, 0.04), 0px 20px 20px 0px rgba(0, 0, 0, 0.04), 0px 40px 32px 0px rgba(0, 0, 0, 0.05), 0px 100px 80px 0px rgba(0, 0, 0, 0.07);
+}
+@supports (font-variation-settings: normal) {
+    :root { font-family: InterVariable, sans-serif; }
+}
+
+/*
+
+весь дизайн всех магазинов посыпется, если мы начнем править body и button
+
+body {
+    display: flex;
+    justify-content: center;
+    margin: 100px 0 0 0;
+    background-color: var(--c-b);
+    color: var(--c-t);
+    font-family: InterVariable, sans-serif;
+    font-size: var(--fs-body);
+    line-height: 130%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--c-b-card);
+}
+
+button {
+    font-family: inherit;
+}
+*/
+
+/* generic text */
+.t-secondary {
+    color: var(--c-t-secondary);
+}
+.t-tertiary {
+    color: var(--c-t-tertiary);
+}
+.t-small {
+    font-size: var(--fs-body-small);
+    letter-spacing: 0.01em;
+    line-height: 1.3em;
+}
+
+.t-price {
+    font-size: var(--fs-price);
+    font-weight: var(--fw-price);
+}
+.t-title {
+    font-size: var(--fs-title);
+    font-weight: var(--fw-title);
+}
+.t-title-small {
+    font-size: var(--fs-title-small);
+    font-weight: var(--fw-title);
+}
+
+
+[class^='t-account'] {
+    color: var(--c-t-account);
+}
+.t-account-title {
+    font-size: var(--fs-account-title);
+    font-weight: var(--fw-account-title);
+}
+.t-account-address {
+    font-size: var(--fs-account-address);
+    font-weight: var(--fw-account-address);
+    font-family: monospace;
+}
+.t-account-balance {
+    font-size: var(--fs-account-balance);
+    font-weight: var(--fw-account-balance);
+    font-family: monospace;
+    letter-spacing: 0.01em;
+}
+
+/* ecosystem colors */
+.bg-polkadotjs {
+    background-color: var(--c-e-polkadotjs);
+}
+.bg-talisman {
+    background-color: var(--c-e-talisman);
+}
+
+/* generic styles */
+.w100 {
+    width: 100%;
+}
+.disabled {
+    pointer-events: none;
+    opacity: 0.4 !important;
+}
+.invisible {
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+}
+.ani-spin {
+    -webkit-animation:spin 2s linear infinite;
+    -moz-animation:spin 2s linear infinite;
+    animation: spin 2s linear infinite;
+}
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
+
+.kco-tac-reveal {
+    visibility: hidden;
+    pointer-events: none;
+}
+body.kco-tac-accepted .kco-tac-reveal {
+    visibility: visible;
+    pointer-events: all;
+}
+
+/* generic containers */
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+.flex-row {
+    display: flex;
+    align-items: center;
+}
+.flex-baseline {
+    align-items: baseline;
+}
+.flex-start {
+    align-items: flex-start;
+}
+
+.gap-xl {
+    gap: 24px;
+}
+.gap-large {
+    gap: 16px;
+}
+.gap-medium {
+    gap: 8px;
+}
+.gap-small {
+    gap: 4px;
+}
+
+.material-symbols-outlined {
+    font-size: 1.4em;
+    opacity: 0.7;
+}
+
+/* placeholders */
+.identicon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    background: #d2d8da;
+    border-radius: 999px;
+}
+
+/* kalatori checkout UI components */
+.kco-container {
+    width: 100%;
+    max-width: 320px;
+    padding: 16px 32px 32px;
+    background: var(--c-b);
+    border-radius: 16px;
+}
+
+.kco-collapsable.collapsed > .kco-collapse-toggler .material-symbols-outlined {
+    rotate: 0deg;
+}
+.kco-collapse-toggler .material-symbols-outlined {
+    rotate: 90deg;
+    transition: rotate 0.3s;
+}
+.kco-collapse-toggler {
+    cursor: pointer;
+}
+.kco-collapsable.collapsed .kco-collapse-content {
+    max-height: 0;
+    overflow: hidden;
+}
+
+.kco-select, .kco-button, .kco-notification {
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    border: none;
+    font-size: var(--fs-button);
+    font-weight: var(--fw-button);
+    letter-spacing: 0.01em;
+}
+.kco-select, .kco-button {
+    justify-content: center;
+    color: var(--c-t-onBtn);
+    background-color: var(--c-b-btn);
+    cursor: pointer;
+    opacity: 0.8;
+}
+.kco-select:hover, .kco-button:hover {
+    opacity: 1;
+}
+
+.kco-button {
+    padding: 8px 16px;
+}
+.kco-button.secondary {
+    background-color: var(--c-b-card);
+    color: var(--c-t);
+}
+.kco-button.tertiary {
+    background-color: inherit;
+    color: inherit;
+}
+.kco-button.small {
+    height: 28px;
+    padding: 6px;
+    text-wrap: nowrap;
+    width: fit-content;
+}
+.kco-button.tiny {
+    font-size: var(--fs-body-small);
+    width: fit-content;
+    padding: 4px 6px;
+}
+
+.kco-select {
+    gap: 4px;
+    width: min-content;
+    align-items: center;
+    font-size: var(--fs-button);
+    font-weight: var(--fw-button);
+    padding: 4px 6px 4px 10px;
+}
+
+.kco-notification {
+    justify-content: space-between;
+}
+
+.kco-label {
+    font-size: var(--fs-label);
+    font-weight: var(--fw-label);
+    border-radius: 999px;
+    padding: 6px 12px;
+}
+
+.kco-manual-payment-card {
+    padding: 16px;
+    border-left: solid 1px var(--c-border);
+}
+.kco-manual-payment-card.state-processing {
+    border: solid 1px var(--c-border);
+    border-radius: 16px;
+}
+.kco-manual-address-field {
+    border: solid 1px var(--c-border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: var(--c-b-card);
+    overflow-wrap: anywhere;
+}
+.kco-manual-address-field.blured {
+    pointer-events: none;
+}
+.kco-manual-address-field.blured .t-account-address {
+    filter: blur(4px);
+}
+.kco-manual-address-field.blured .kco-button {
+    opacity: 0;
+}
+
+.kco-tac-toggler {
+    cursor: pointer;
+}
+.kco-tac-toggler[val^='1'] span:nth-child(1) {
+    display: none;
+}
+.kco-tac-toggler[val^='0'] span:nth-child(2) {
+    display: none;
+}
+
+.kco-qr-modal {
+    position: absolute;
+    z-index: 999;
+    width: 228px;
+    height: 228px;
+    box-shadow: var(--card-shadow);
+    background: var(--c-b);
+    padding: 24px;
+    border-radius: 16px;
+    visibility: hidden;
+}
+.kco-qr-modal::after {
+    content: ' ';
+    position: fixed;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--c-b);
+    opacity: 0.1;
+}
+.kco-qr-modal.opened {
+    visibility: visible;
+}
+.kco-qr-modal img {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+}
+
+.kco-accounts {
+    position: relative;
+    box-shadow: var(--card-shadow);
+    border-radius: 0 0 16px 16px;
+}
+.scroll {
+    max-height: 350px;
+    overflow: scroll;
+    padding: 16px;
+}
+
+.kco-account {
+    position: relative;
+    padding: 6px 8px;
+    background-color: var(--c-b-card);
+    border-radius: 8px;
+}
+.kco-account.inactive {
+    opacity: 0.6;
+}
+.kco-account:after {
+    content: " ";
+    width: 8px;
+    height: 8px;
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    border-radius: 999px;
+}
+.kco-account.polkadotjs::after {
+    background-color: var(--c-e-polkadotjs);
+}
+.kco-account.talisman::after {
+    background-color: var(--c-e-talisman);
+}
+
+.kco-account.active:hover,
+.kco-account.selected {
+    background-color: var(--c-b-card-hover);
+    cursor: pointer;
+}
+.kco-account.active:hover .t-account-balance {
+    display: none;
+}
+
+.kco-account .kco-select {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    right: 0;
+    margin-right: 60px;
+    transition: all 0.3s;
+}
+.kco-account.active:hover .kco-select {
+    display: flex;
+    pointer-events: all;
+    margin-right: 8px;
+    opacity: 1;
+}
+.kco-account.active:hover .kco-select {
+    margin-right: 8px;
+    opacity: 1;
+}

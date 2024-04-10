@@ -46,11 +46,12 @@ class Ps_Dotpayment extends PaymentModule
 
 	$this->DOT_URL_DEFAULT = 'http://localhost:16726';
 	$this->DOT_NAME_DEFAULT = 'PrestaShop';
+	$this->DOT_CURRENCES_DEFAULT = '';
 
         $this->currencies = true;
         $this->currencies_mode = 'checkbox';
 
-	$this->fields_need=['DOT_NAME','DOT_URL'];
+	$this->fields_need=['DOT_NAME','DOT_URL', 'DOT_CURRENCES'];
 
         $config = Configuration::getMultiple($this->fields_need);
 	foreach($this->fields_need as $l) $this->{$l} = ( empty($config[$l]) ? $this->{$l.'_DEFAULT'} : $config[$l] );
@@ -282,10 +283,75 @@ class Ps_Dotpayment extends PaymentModule
                     ],
 
                     [
+                        'name' => 'DOT_CURRENCES',
+                        'label' => $this->trans('Enabled currences', [], 'Modules.Dotpayment.Admin'),
+			'placeholder' => '',
+                        'desc' => $this->trans('Left blank for enable all currences', [], 'Modules.Dotpayment.Admin'),
+                        'type' => 'text',
+			'id' => 'kalatori_currences',
+                        'required' => false,
+                    ],
+
+                    [
                         'name' => 'DOT_URL',
                         'label' => $this->trans('Daemon url', [], 'Modules.Dotpayment.Admin'),
 			'placeholder' => $this->DOT_URL_DEFAULT, // http://localhost:16726
-                        'desc' => $this->trans('The daemon URL, if left blank, will default to: '.$this->DOT_URL_DEFAULT, [], 'Modules.Dotpayment.Admin'),
+                        'desc' =>
+"<script>
+
+function kalatori_pin(e) { e = e.innerHTML;
+    var o={}, w = document.querySelector('#kalatori_currences');
+    var s = w.value.replace(/,/g,' ').split(' ');
+    for(var i of s) { if(i!='') o[i]=1; }
+    if(o[e]) delete o[e]; else o[e]=1;
+    w.value = Object.keys(o).join(' ');
+    return false;
+}
+
+function kalatori_test(e) {
+    var q = e.closest('.form-group');
+    var ans = q.querySelector('#kalatori_test');
+    ans.style.display = 'block';
+
+    var i = q.querySelector('INPUT');
+    var url_my = (i.value && i.value!='' ? i.value : i.placeholder);
+    var url = '".Configuration::get('DOT_URL')."';
+    if(url_my != url) return ans.innerHTML = 'Save first and try again';
+
+    var ajax_url = '". $this->context->link->getModuleLink($this->name, 'ajax', [], true)."';
+    ajax_url += '?endpoint=status';
+
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+	if (this.readyState == 4 && this.status == 200) {
+	    var s = 'Daemon is not responsing: '+url;
+	    try {
+		function hh(s) { return s.replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+		var j = JSON.parse(this.responseText);
+		if(!j.error) {
+		    var curs = '';
+		    for(var x in j.supported_currencies) curs+=' <button onclick=\"return kalatori_pin(this)\">'+hh(x)+'</button>';
+    		    s = '<div style=\"color:green\">Daemon is avaliable: '+url+'</div>'
+		    + '<div>currences:'+curs+'</div>'
+		    + '<div>version: '+hh(j.server_info.version)+'</div>'
+		    + '<div>remark: '+hh(j.server_info.kalatori_remark)+'</div>';
+
+		    var w = document.querySelector('#kalatori_currences');
+		    if(w.value=='') w.value = Object.keys(j.supported_currencies).join(' ');
+		}
+	    } catch(er){}
+	    ans.innerHTML = s;
+	}
+    };
+    xhttp.ontimeout = function() { ans.innerHTML = 'Server is not avaliable'; };
+    xhttp.open('GET', ajax_url, true);
+    xhttp.timeout = 1000; // Timeout set to 1 second
+    xhttp.send();
+}
+</script>
+<input type='button' value='check' onclick='kalatori_test(this)' style='color:sienna'> &nbsp; The daemon URL, default ".$this->DOT_URL_DEFAULT." if empty"
+."<div id='kalatori_test' class='alert alert-info' style='display:none'></div>"
+,
                         'type' => 'text',
                         'required' => false,
                     ],
@@ -334,6 +400,8 @@ class Ps_Dotpayment extends PaymentModule
             $this->context->getCurrentLocale()->formatPrice($cart->getOrderTotal(true, Cart::BOTH), $this->context->currency->iso_code)
         );
 
+	$amount = $cart->getOrderTotal(true, Cart::BOTH);
+
         $dotDaemon = $this->daemon;
         if (!$dotDaemon) {
             $dotDaemon = '___________';
@@ -347,12 +415,16 @@ class Ps_Dotpayment extends PaymentModule
         return [
 	    'module_name' => $this->name,
 	    'module_host' => $this->_path . "views",
-	    'ajax_host' => $this->context->link->getModuleLink($this->name, 'ajax', [], true),
+	    'ajax_url' => $this->context->link->getModuleLink($this->name, 'ajax', [], true),
 	    'order_id' => $cart->id,
 	    'shop_id' => $cart->shop_id,
+	    'currency' => $this->context->currency->iso_code,
+	    'currences' => Configuration::get('DOT_CURRENCES'),
+	    'name' => Configuration::get('DOT_NAME'),
 //	    'products' => sizeof($cart->'_products:protected'),
 //	    'products' => sizeof($cart->_products),
             'total' => $total,
+            'amount' => $amount,
             'dotDaemon' => $dotDaemon,
             'dotCustomText' => $dotCustomText,
         ];

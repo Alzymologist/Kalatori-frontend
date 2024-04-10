@@ -9,7 +9,7 @@ DIR | prestashop_release/src
 
 ../../common/img/logo.png 	   | ps_dotpayment/*
 ../../common/DOT.js		   | ps_dotpayment/views/js/*
-../../common/identicon.js	   | ps_dotpayment/views/js/*
+# ../../common/identicon.js	   | ps_dotpayment/views/js/*
 ../../common/img/Alzymologist_.png | ps_dotpayment/views/img/*
 ../../common/img/polkadot.webp     | ps_dotpayment/views/img/*
 
@@ -30,7 +30,7 @@ validation.php    | ps_dotpayment/controllers/front/*
 ../../common/vendor/bundle-polkadot-util-crypto.js     | ps_dotpayment/views/js/*
 ../../common/vendor/bundle-polkadot-util.js            | ps_dotpayment/views/js/*
 
-../../common/vendor/qrcode.min.js | ps_dotpayment/views/js/*
+# ../../common/vendor/qrcode.min.js | ps_dotpayment/views/js/*
 
 #https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-api.js             | ps_dotpayment/views/js/*
 #https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-extension-dapp.js  | ps_dotpayment/views/js/*

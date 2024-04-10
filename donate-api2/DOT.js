@@ -823,15 +823,19 @@ daemon_get_info: async function() {
     // Взяли список блокчейнов
 	if(1 || !DOT.chain.ajax_url) { // Local daemon direct
 		// Setup enpoints
-		DOT.chain.ajax_url = 'http://localhost:16726';
+		DOT.chain.ajax_url = (DOT.cx.daemon_direct ? DOT.cx.daemon_direct : 'http://localhost:16726');
 		// DOT.health_url = DOT.chain.ajax_url+'/v2/health'; // нахуй не нужен так-то
 		DOT.status_url = DOT.chain.ajax_url+'/v2/status';
 		DOT.order_url = DOT.chain.ajax_url+'/v2/order/*';
 
 		// Get Currences /status
 		console.log("Get Currences /status = "+DOT.status_url);
-		var s = await DOT.AJAX( DOT.status_url );
-		if(!s) return false;
+		try {
+		    var s = await DOT.AJAX( DOT.status_url );
+		    if(!s) DOT.huemoe();
+		} catch(er) {
+		    return DOT.error("Can't connect daemon: "+DOT.status_url);
+		}
 		try {
 		    var j = JSON.parse(s);
 		    if(!j.supported_currencies || 0==Object.keys(j).length) return DOT.error("/status: No currencies");

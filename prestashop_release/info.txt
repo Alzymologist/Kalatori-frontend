@@ -1,0 +1,15 @@
+
+Моделька: https://prestashop.zymologia.fi
+
+Админка: https://prestashop.zymologia.fi/admin160jzvny55obu3mcrpu
+Ну, паролей вы, понятное дело, не знаете.
+
+Особенности магазина:
+
+При любых изменениях необходимо обнулять кэш в /var/cache/prod:
+
+DIR="../www"
+sudo chmod -R a+rw "${DIR}/var/cache/prod"
+rm -rf "${DIR}/var/cache/prod"
+
+

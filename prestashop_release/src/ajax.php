@@ -14,98 +14,80 @@ class Ps_DotpaymentAjaxModuleFrontController extends ModuleFrontController
      */
   public function postProcess() {
 
+    $endpoint = $_REQUEST['endpoint'];
+    $url = Configuration::get('DOT_URL'); if(empty($url)) $url='http://localhost:16726';
+
+    // S t a t u s
+    if($endpoint == 'status') {
+        $r = $this->ajax($url."/v2/status");
+	$this->jdie($r);
+    }
+
+    if($endpoint != 'order') $this->ejdie('Unknown endpoint. Use status or order.');
+
+    // O r d e r
     $cart = $this->context->cart;
 
-    // Что нам известно внутри магазина
-    $total = (float) ($cart->getOrderTotal(true, Cart::BOTH));
-    $currency = $this->context->currency->iso_code;
-    $order_id = (int) $cart->id;
-    $customer = $cart->id_customer;
-
-    // что нам прислали
-    $input = (array)json_decode( file_get_contents("php://input") );
-    if(empty($input) || empty($input['price']) || empty($input['order_id'])) {
-	$ajax_order_id = $ajax_total = 0;
-    } else {
-	$ajax_order_id = $input['order_id'];
-	$ajax_total = $input['price'];
-    }
-
-    if($order_id) {
-	$order_present = 1;
-	$json = array(
-    	    'ajax_order_id' => $ajax_order_id,
-	    'ajax_total' => $ajax_total,
-	    'store_currency' => $currency,
-	    'store_order_id' => $order_id,
-	    'store_total' => $total,
-	    'store_customer' => $customer
-	);
-    } else { // уже оплачен и корзина сброшена, делаем тогда проверку из наших данных
-	$order_present = 0;
-	// берем наши данные
-	if( $ajax_order_id * $ajax_total == 0 ) $this->ejdie("Data error: order_id, total not found");
-	$order_id = $ajax_order_id;
-	$total = $ajax_total;
-	$json = array(
-	    'ajax_order_id' => $input['order_id'],
-	    'ajax_total' => $input['total']
-	);
-    }
-
-    // Defaults
-    $name = Configuration::get('DOT_NAME'); if(empty($name)) $name='PrestaShop';
-    $url = Configuration::get('DOT_URL'); if(empty($url)) $url='http://localhost:16726';
-    $url.="/order/ps_".urlencode($name).'_'.$order_id."/price/".$total;
-
-    if (   $cart->id_customer == 0
+    if( !$cart
+	|| $cart->id_customer == 0
 	|| $cart->id_address_delivery == 0
 	|| $cart->id_address_invoice == 0
-	|| !$this->module->active)
-    {
-	    $json['redirect'] = $this->context->link->getPageLink('order', true, null, 'step=1'); // '/index.php?controller=order&step=1';
-	    $this->jdie($json);
-    }
+	|| !$this->module->active
+    ) $this->jdie( array('redirect' => $this->context->link->getPageLink('order', true, null, 'step=1') ) );
 
     // Check that this payment option is still available in case the customer changed his address just before the end of the checkout process
-    $authorized = false;
-    foreach (Module::getPaymentModules() as $module) {
-        if ($module['name'] == 'ps_dotpayment') { $authorized = true; break; }
-    } if (!$authorized) {
-        $this->ejdie($this->module->getTranslator()->trans('This payment method is not available.', [], 'Modules.Dotpayment.Shop'));
-    }
+    $authorized=false; foreach( Module::getPaymentModules() as $module ) {
+        if($module['name'] == 'ps_dotpayment') { $authorized=true; break; }
+    } if( !$authorized ) $this->ejdie('This payment method is not available.');
 
+    $customer = $cart->id_customer;
     $customer_obj = new Customer($customer);
-    if (!Validate::isLoadedObject($customer_obj)) {
-	$json['redirect'] = $this->context->link->getPageLink('order', true, null, 'step=1'); // '/index.php?controller=order&step=1';
-	$this->jdie($json);
-    }
+    if(!Validate::isLoadedObject($customer_obj)) $this->jdie( array('redirect' => $this->context->link->getPageLink('order', true, null, 'step=1') ) );
 
-    $mailVars = [ '{dot_daemon}' => Configuration::get('DOT_DAEMON') ];
+    // Что нам известно внутри магазина
+    $amount = (float) ($cart->getOrderTotal(true, Cart::BOTH));
+    $order = (int) $cart->id;
+    $currency0 = $this->context->currency->iso_code;
 
-    // $this->ejdie( $this->context->link->getModuleLink($this->module->name, 'validation', [], true) );
+    // что нам прислали?
+    $input = (array)json_decode( file_get_contents("php://input") );
+    $currency = $input['currency'];
+
+    // Проверяем, разрешен ли
+    $curs = Configuration::get('DOT_CURRENCES'); $curs = str_replace(',',' ',$curs);
+    $C = ( strpos($curs,' ')<0 ? array($curs) : explode(' ',$curs) );
+    foreach($C as $n=>$c) $C[$n] = trim($c);
+
+    if(
+	!in_array($currency,$C) // если не разрешено или не соответствует по начальным буквам USD -> USDC
+	|| $currency0 != substr($currency,0,strlen($currency0))
+    ) $this->ejdie('Currency not allowed');
+
+    $name = Configuration::get('DOT_NAME'); if(empty($name)) $name='PrestaShop';
+    $url = Configuration::get('DOT_URL'); if(empty($url)) $url='http://localhost:16726';
+    $url.="/v2/order/ps_".urlencode($name).'_'.$order;
 
     // A J A X
-    $r = $this->ajax($url);
-    if(isset($r['error'])) $this->jdie($r);
-    // Йобаные патчи для kalatori
-    if(isset($r['order'])) $r['order_id']=$r['order'];
-    $r['order_id']=preg_replace("/^.*\_/s",'',$r['order_id']);
-
-    foreach($r as $n=>$l) $json[$n]=$l;
+    $data = array(
+	'currency' => $input['currency'],
+	'order' => $order,
+	'amount' => $amount
+    );
+    $r = $this->ajax($url,$data);
 
     // Log
-    $this->logs(date("Y-m-d H:i:s")." [".$json['result']."] order:".$json['order_id']." price:".$json['price']." ".$r['pay_account']);
+    $this->logs("\n\n--------------------- ".date("Y-m-d H:i:s")." order:".$data['order']." amount:".$data['amount']." ".$data['currency']."\n".print_r($r,1));
 
     // Success ?
-    if(isset($r['result']) && strtolower($r['result'])=='paid') {
+    if(isset($r['payment_status']) && strtolower($r['payment_status'])=='paid') {
 	// paid success
-	if( $order_present ) {
+	if( $order ) {
 	    // SUCCESS
+	    $mailVars = [ '{dot_daemon}' => Configuration::get('DOT_DAEMON') ];
 	    $this->module->validateOrder(
-		$order_id,
+		$order,
 		(int) Configuration::get('PS_OS_PAYMENT'),
-		$total,
+		$amount,
 		$this->module->displayName,
 		null,
 		$mailVars,
@@ -114,38 +96,44 @@ class Ps_DotpaymentAjaxModuleFrontController extends ModuleFrontController
 		$customer_obj->secure_key
 	    );
         }
-        $json['redirect'] = $this->context->link->getModuleLink($this->module->name, 'validation', [], true);
-	$this->jdie($json);
+        $r['redirect'] = $this->context->link->getModuleLink($this->module->name, 'validation', [], true);
     }
 
-    $this->jdie($json);
-  }
+    // Log
+    $this->logs("\n\n--------------------- ".date("Y-m-d H:i:s")." order:".$data['order']." amount:".$data['amount']." ".$data['currency']."\n".print_r($r,1));
 
+    $this->jdie($r);
+  }
 
   function ejdie($s) { $this->jdie(array('error'=>1,'error_message'=>$s)); }
   function jdie($j) { die(json_encode($j)); }
-
-  function ajax($url) {
+  function ajax($url,$data=false) {
     $ch = curl_init($url);
     curl_setopt_array($ch, array(
         CURLOPT_HTTPHEADER => array('Content-Type:application/json'),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FAILONERROR => true,
         CURLOPT_CONNECTTIMEOUT => 2, // only spend 3 seconds trying to connect
-        CURLOPT_TIMEOUT => 2 // 30 sec waiting for answer
+        CURLOPT_TIMEOUT => 20 // 30 sec waiting for answer
     ));
+
+    if($data) {
+	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    }
     $r = curl_exec($ch);
-    if(curl_errno($ch) || empty($r)) $this->ejdie("Daemon responce empty : ".curl_error($ch));
+    if(curl_errno($ch) || empty($r)) $this->ejdie("Daemon responce empty: ".curl_error($ch));
     $r = (array) json_decode($r);
     if(empty($r)) $this->ejdie("Daemon responce error parsing");
+    // Add the HTTP response code
+    $r['http_code'] = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     curl_close($ch);
     return $r;
   }
 
-
   function logs($s='') {
     // $f = DIR_LOGS . "polkadot_log.log";
-//    $f='/home/presta/log/payments.log';
+//    $f='/home/WWW/shop-PrestaShop/files/payments.log';
 //    $l=fopen($f,'a+');
 //    fputs($l,$s."\n");
 //    fclose($l);

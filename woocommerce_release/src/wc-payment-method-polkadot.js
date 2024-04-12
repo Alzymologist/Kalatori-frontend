@@ -39,28 +39,26 @@
 
   };
 
-    var cx={};
     const BUTTON_NAME = 'Pay using Polkadot';
     // Imports
     const { decodeEntities }  = wp.htmlEntities;
     // Data
     const settings = wc.wcSettings.getSetting('polkadot_data', {});
-    // debugger;
     const path = settings.root_url+'/';
-    const label = decodeEntities(settings.title) || 'polkadot';
+    const label = 'Kalatori'; // decodeEntities(settings.title) || 'polkadot';
+
+    var cx = {
+	    currences: settings.currences,
+	    currency: settings.currency,
+	    mainjs: path,
+	    status_url: path.replace(/\/wp\-content\/.+$/g,'')+'/wp-json/kalatori/v1/status',
+	    order_url: path.replace(/\/wp\-content\/.+$/g,'')+'/wp-json/wc/store/v1/checkout?_locale=user&ajax=1',
+    };
 
     ajax_checkout = async function(e) {
 
-	DOT.onpaid = function(json){
-	    DOT.button_on();
-	    var button = document.querySelector( '.wc-block-components-checkout-place-order-button' );
-	    button.setAttribute('paid','1'); // пометили, что платеж получился
-	    button.click();
-	    // alert('PAID!');
-	};
-
-	// переопределяем альтернативный AJAX для DOT-процедур
-//        DOT.AJAX_ALTERNATIVE = async function(url,func,s) {
+    // переопределяем альтернативный AJAX для DOT-процедур
+/*
         DOT.AJAX_ALTERNATIVE = async function(url,s) {
 	    var args = JSON.parse(my_args);
 	    var customer_note=document.querySelector("DIV.wc-block-checkout__add-note TEXTAREA");
@@ -76,8 +74,7 @@
 
 	    const r = await fetch(
 		DOT.payment_url // +"&mul="+DOT.chain.mul
-		,{ method:'POST', mode:'cors', credentials:'include', headers: [
-		    ["Content-Type", "application/json"],
+		,{ method:'POST', mode:'cors', credentials:'include', headers: [  ["Content-Type", "application/json"],
 		    ["X-WP-Nonce", wp.apiFetch.nonceMiddleware.nonce ],
 		    ["Nonce", JSON.parse(DOT.f_read('storeApiNonce')).nonce ],
 		], body: JSON.stringify(data)
@@ -85,12 +82,9 @@
 	    );
 	    if(!r.ok) return DOT.error("Error: " + r.status);
 	    return await r.text();
-	    //var text = await r.text();
-	    //func(text);
 	};
+*/
 
-	DOT.cx.id=1;
-	DOT.cx.ajax_url=1;
 	DOT.all_submit();
     };
 
@@ -109,22 +103,17 @@ wallet_start=function(){
 
         console.log('wallet go inited');
 
+	// make data
 	DOT.store = 'woocommerce';
-	DOT.path=DOT.mainjs=path;
-	DOT.ajaxm = path+'/image/ajaxm.gif';
-	DOT.health_url = path.replace(/\/wp\-content\/.+$/g,'')+'/wp-json/kalatori/v1/health';
-	DOT.payment_url = path.replace(/\/wp\-content\/.+$/g,'')+'/wp-json/wc/store/v1/checkout?_locale=user&ajax=1';
-	console.log('Health rest: '+DOT.health_url);
 
 	DOT.cx = cx;
-
 	DOT.class_ok="wc-block-store-notice wc-block-components-notice-banner is-ok is-dismissible";
 	DOT.class_error="wc-block-store-notice wc-block-components-notice-banner is-error is-dismissible";
 	DOT.class_warning="wc-block-store-notice wc-block-components-notice-banner is-warning is-dismissible";
 
 	DOT.button_on=function() {
 	    var b=document.querySelector('.wc-block-components-checkout-place-order-button');
-	    b.querySelectorAll('SPAN')[0].innerHTML='Pay using Polkadot';
+	    b.querySelectorAll('SPAN')[0].innerHTML='Pay using Kalatori';
 	    b.disabled=false;
 	};
 
@@ -134,9 +123,50 @@ wallet_start=function(){
 	    b.disabled=true;
 	};
 
-	// if(!DOT.dom('WalletID')) DOT.dom('polkadot_work').innerHTML="<img src='"+DOT.ajaxm+"'> loading plugin...";
-	DOT.init();
+/*
+	DOT.onpaid = function(json){
+	    DOT.button_on();
+	    var button = document.querySelector( '.wc-block-components-checkout-place-order-button' );
+	    button.setAttribute('paid','1'); // пометили, что платеж получился
+	    button.click();
+	    // alert('PAID!');
+	};
+*/
+
+	DOT.onjson = function(json) {
+	    if(json.ans =='pending' || json.ans == 'paid') return json;
+	    if(!json.payment_result || json.payment_result.payment_status != "success") return json;
+	    json.ans = 'paid';
+	    json.redirect = json.payment_result.redirect_url;
+	    return json;
+	};
+
+	DOT.ondata = function(data) {
+	    // Renew headers
+	    DOT.ajax_headers = {
+		"X-WP-Nonce": wp.apiFetch.nonceMiddleware.nonce,
+		"Nonce": JSON.parse(DOT.f_read('storeApiNonce')).nonce,
+	    };
+	    // Create Data
+	    var args = JSON.parse(my_args);
+	    var customer_note=document.querySelector("DIV.wc-block-checkout__add-note TEXTAREA");
+	    customer_note=(customer_note ? (''+customer_note.value) : '');
+
+	    DOT.cx.order_url = DOT.cx.order_url.replace(/\&currency\=.+$/g,'')+'&currency='+data.currency;
+
+	    return {
+		"shipping_address": args.cart.shippingAddress,
+		"billing_address": args.cart.billingAddress,
+		"customer_note": customer_note,
+		"payment_method": "polkadot",
+		"payment_data": [{"key":"wc-polkadot-new-payment-method","value":false}],
+	    };
+	};
+
+	DOT.design();
     };
+
+
 
     if(typeof(DOT)=='object') wallet_go();
     else {
@@ -162,9 +192,12 @@ const Content_open = () => {
 const Content2 = () => {
     return React.createElement('div', { className: 'greeting', id: 'polkadot_work' },
 	React.createElement(
-	    'img',
-	    { className: 'is_error', src: path+'/image/ajaxm.gif' }, // DOT.ajaxm пока не существует
-	    null
+	    'div',
+	    { className: 'greeting', id: 'polkadot_work' },
+	    "Loading engine... If you see this message long enough to read to the end, something has gone wrong."
+//	    'img',
+//	    { className: 'is_error', src: path+'/image/ajaxm.gif' }, // DOT.ajaxm пока не существует
+//	    null
 	)
     );
 };
@@ -204,4 +237,3 @@ const PolkadotPaymentMethod = {
 wc.wcBlocksRegistry.registerPaymentMethod( PolkadotPaymentMethod );
 
 }());
-

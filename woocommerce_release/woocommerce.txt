@@ -11,12 +11,13 @@ DIR | woocommerce_release/src
 
 ../../common/img/Alzymologist_.png | polkadot-payments-woocommerce/image/*
 ../../common/img/polkadot.webp     | polkadot-payments-woocommerce/image/*
-../../common/identicon.js		| polkadot-payments-woocommerce/*
+# ../../common/identicon.js		| polkadot-payments-woocommerce/*
 ../../common/DOT.js			| polkadot-payments-woocommerce/*
 
 Polkadot.class.php			| polkadot-payments-woocommerce/*
 polkadot-payments-woocommerce.php	| polkadot-payments-woocommerce/*
 wc-payment-method-polkadot.js		| polkadot-payments-woocommerce/*
+admin.js				| polkadot-payments-woocommerce/*
 
 ../../common/vendor/bundle-polkadot-api.js             | polkadot-payments-woocommerce/*
 ../../common/vendor/bundle-polkadot-extension-dapp.js  | polkadot-payments-woocommerce/*
@@ -25,7 +26,7 @@ wc-payment-method-polkadot.js		| polkadot-payments-woocommerce/*
 ../../common/vendor/bundle-polkadot-util-crypto.js     | polkadot-payments-woocommerce/*
 ../../common/vendor/bundle-polkadot-util.js            | polkadot-payments-woocommerce/*
 
-../../common/vendor/qrcode.min.js | polkadot-payments-woocommerce/*
+# ../../common/vendor/qrcode.min.js | polkadot-payments-woocommerce/*
 
 # https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-api.js             | polkadot-payments-woocommerce/*
 # https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-extension-dapp.js  | polkadot-payments-woocommerce/*
@@ -33,4 +34,3 @@ wc-payment-method-polkadot.js		| polkadot-payments-woocommerce/*
 # https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-types.js           | polkadot-payments-woocommerce/*
 # https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-util-crypto.js     | polkadot-payments-woocommerce/*
 # https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-util.js            | polkadot-payments-woocommerce/*
-

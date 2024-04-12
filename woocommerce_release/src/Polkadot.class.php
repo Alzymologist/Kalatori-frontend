@@ -34,7 +34,7 @@ final class Polkadot extends AbstractPaymentMethodType {
 
 	public function get_payment_method_script_handles() {
                 $version = "1.0.0";
-                $path = plugins_url('wc-payment-method-polkadot.js?'.rand(0,99999999), __FILE__);
+                $path = plugins_url('wc-payment-method-polkadot.js?'.rand(0,99999999), __FILE__); //lleorand
 		// $n='WC_Polkadot_Gateway';
 		$n='wc-payment-method-polkadot';
                 $handle = $n;
@@ -45,12 +45,12 @@ final class Polkadot extends AbstractPaymentMethodType {
 	}
 
 	public function get_payment_method_data() {
-		// die("id : ".$this->get_id());
 		return [
-			// 'order_id' => gettype( $this->id ),
-			'root_url'                 => plugins_url('', __FILE__),
-			'title'                    => $this->get_setting( 'title' ),
-			'description'              => $this->get_setting( 'description' )
+			'root_url'	=> plugins_url('', __FILE__),
+			'name'		=> $this->get_setting( 'store_name' ),
+			// 'description'=> $this->get_setting( 'description' ),
+			'currences'	=> $this->get_setting( 'currences' ),
+			'currency'	=> get_woocommerce_currency()
 		];
 	}
 }

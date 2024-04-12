@@ -16,3 +16,8 @@ Cargo.lock
 gogit.sh
 
 prestashop_release/secret.txt
+woocommerce_release/secret.txt
+opencart3_release/secret.txt
+opencart4_release/secret.txt
+magetnto_release/secret.txt
+solidus_release/secret.txt

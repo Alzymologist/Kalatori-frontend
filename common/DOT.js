@@ -24,24 +24,34 @@ test_acc: "15oF4uVJwmo4TdGW7VfQxNLavjCXviqxT9S1MgbjMNHr6Sp5",
 
 nodes: {},
 
-chain: { // тут будет инфо, запрошенное от блокчейна
-//    ss58: 0,
-//    decimals: false,
-//    mul: false,
-//    symbol: '',
-//    deposit: false, // 1*defaultMul,
-//    fee: false, // 0.02*defaultMul,
-//    wss: "https://node-polkadot.zymologia.fi:444",
+cx: { // тут будет инфо
+// СЛУЖЕБНОЕ:
+    topupButton: '', // (DOT.is_test() ? '' : "💰"),
+
+// ИЗНАЧАЛЬНОЕ:
     pay_acc: 'wait', //  целевой аккаунт, который пришлет магазин
     pay_bal: 0, // баланс на нём
     my_acc: "", // выбранный аккаунт
-//    order: false,
-//    total: false, // 30.1
-//    total_planks: false, // 301000000000
-//    total_add_planks: false,
-//    total_min_planks: false,
-    // hashTemplate: "https://polkadot.subscan.io/extrinsic/", // https://assethub-polkadot.subscan.io/extrinsic/
-    topupButton: '', // (DOT.is_test() ? '' : "💰"),
+
+// ПОЯВЯЩЕЕСЯ:
+//	total: 30.1 - цена
+//	order: "X1123_M",
+//	my_hash: будущий хэш
+//	ajax_url: адрес эндпоинта
+
+// ОБЯЗАТЕЛЬНОЕ:
+//	currency: "USD",
+//	currences: "USDT-L DOT-L"
+
+// ОПЦИОНАЛЬНОЕ:
+//	daemon_direct: 0 - флаг обозначающий, напрямую ли должен DOT.js обращаться к демону,
+//		если нет, то status_url=ajax_url+'?endpoint=status'; order_url=ajax_url+'?endpoint=order';
+//      	если да, что status_url=ajax_url+'/v2/status'; order_url=ajax_url+'/v2/order/*';
+//	status_url: можно задать отдельно
+//	order_url: можно задать отдельно
+//	mainjs: "https://store/plugin/view/js/" Папка, где JS-скрипты, если не установлена, считается, что они уже
+//	name - store name
+//	shop_id - shop id (add to order_id if exist)
 },
 
 flag: {/*
@@ -75,15 +85,17 @@ reboot: function(newcur) {
 
 accs: [], // тут будет инфо аккаунтов
 
-cx: {}, // а тут инфо от магазина
-
 //////////////////////////////////////////////////////////
 
 // Фишки для дизайна Света
 SV: {
 
     // Select an Acount
-    select: async function() { var e = window.event.target;
+    select: async function(event) {
+	event.preventDefault();
+	if(event.stopPropagation) event.stopPropagation();
+	if(event.stopImmediatePropagation) event.stopImmediatePropagation();
+	var e = window.event.target;
 
 	console.log("=========== select account");
 
@@ -112,11 +124,12 @@ SV: {
 
         if(!a.active) return; // там недостаточно средств
 
-	DOT.chain.my_acc = a.acc;
-	DOT.chain.my_wallet = a.wallet;
+	DOT.cx.my_acc = a.acc;
+	DOT.cx.my_wallet = a.wallet;
 	DOT.SV.page_Select();
 
 	DOT.all_submit();
+
     },
 
 
@@ -125,7 +138,7 @@ SV: {
 	console.log("=========== SCREEN: select");
 
 	var a = false; for(var x of DOT.accs) {
-	    if(x.acc == DOT.chain.my_acc && x.wallet == DOT.chain.my_wallet) { a = x; break; }
+	    if(x.acc == DOT.cx.my_acc && x.wallet == DOT.cx.my_wallet) { a = x; break; }
 	}
 
 	// other: pay with this value
@@ -191,7 +204,7 @@ SV: {
 
 	DOT.SV.init();
 	DOT.html_wallets();
-	var a = false; for(var x of DOT.accs) { if(x.acc == DOT.chain.my_acc) { a = x; break; } }
+	var a = false; for(var x of DOT.accs) { if(x.acc == DOT.cx.my_acc) { a = x; break; } }
 	if(a) {
 	    console.log('a: '+a.wallet+'/'+a.acc+'/'+a.name);
 
@@ -200,14 +213,14 @@ SV: {
 	    a.elem.classList.remove('inactive');
 	    a.elem.classList.add('selected');
 	    DOT.dom('sv-one-account').appendChild(a.elem);
-	} else console.log('notf: '+DOT.chain.my_acc);
+	} else console.log('notf: '+DOT.cx.my_acc);
     },
 
 
     page_Signature: function() {
 	console.log("=========== SCREEN: Signature");
 	DOT.SV.page_draw_oneacc();
-	DOT.dom('sv-notification').innerHTML = `<span>Waiting for your Signature from <span class='chain-my_wallet'></span> browser extension</span><span class="material-symbols-outlined ani-spin">autorenew</span>`;
+	DOT.dom('sv-notification').innerHTML = `<span>Waiting for your Signature from <span class='cx-my_wallet'></span> browser extension</span><span class="material-symbols-outlined ani-spin">autorenew</span>`;
 	DOT.all_submit();
     },
 
@@ -263,12 +276,12 @@ SV: {
 <div id='sv-info' class="t-small t-secondary">
 </div>
 <span class="t-small t-secondary">
-    A balance of <span class='chain-total_min'>   </span> <span class='chain-symbol'>   </span> will be sufficient to cover both your order and the transaction fee on the Polkadot network
+    A balance of <span class='cx-total_min'>   </span> <span class='cx-symbol'>   </span> will be sufficient to cover both your order and the transaction fee on the Polkadot network
 </span>
 <div class="kco-collapsable flex-col gap-medium">
     <div class="kco-collapse-toggler flex-row">
         <span class="material-symbols-outlined">chevron_right</span>
-        <span class="t-title-small">Accounts below <span class='chain-total_min'>   </span> <span class='chain-symbol'>   </span></span>
+        <span class="t-title-small">Accounts below <span class='cx-total_min'>   </span> <span class='cx-symbol'>   </span></span>
     </div>
 
     <div id='sv-accounts-inactive' class="kco-collapse-content flex-col gap-medium">
@@ -286,13 +299,13 @@ SV: {
 	DOT.do_button_on();
 	e.innerHTML=DOT.ajaximg();
 	await DOT.topUpPay();
-	e.innerHTML=DOT.chain.topupButton;
+	e.innerHTML=DOT.cx.topupButton;
     },
 
     // Copy pay_acc to buffer + some effects
     cpbufACC: function() { var e = window.event.target;
-	if(!DOT.chain.pay_acc) return;
-	DOT.cpbuf(DOT.chain.pay_acc);
+	if(!DOT.cx.pay_acc) return;
+	DOT.cpbuf(DOT.cx.pay_acc);
 	var w=DOT.dom('sv-toggle-manual-field').querySelectorAll(".t-account-address")[0];
 	DOT.aFlash(w,0.02);
         DOT.a360(e,0.3);
@@ -310,12 +323,12 @@ SV: {
 
         var w=DOT.dom('polkadot_work');
 
-        for(var i in DOT.chain) { w.querySelectorAll(".chain-"+i).forEach(e=>{
-	    if(i=='topupButton') e.innerHTML = DOT.chain[i];
-	    else e.innerHTML = DOT.h( DOT.chain[i]===undefined ? '': DOT.chain[i] );
+        for(var i in DOT.cx) { w.querySelectorAll(".cx-"+i).forEach(e=>{
+	    if(i=='topupButton') e.innerHTML = DOT.cx[i];
+	    else e.innerHTML = DOT.h( DOT.cx[i]===undefined ? '': DOT.cx[i] );
 	}); }
-	w.querySelectorAll(".chain-symbol").forEach(e=>{ e.innerHTML = (DOT.CUR===undefined?'':DOT.CUR); });
-        for(var i in DOT.nodes[DOT.CUR]) { w.querySelectorAll(".chain-"+i).forEach(e=>{ e.innerHTML = DOT.h( DOT.nodes[DOT.CUR][i]===undefined ? '':DOT.nodes[DOT.CUR][i] ); }); }
+	w.querySelectorAll(".cx-symbol").forEach(e=>{ e.innerHTML = (DOT.CUR===undefined?'':DOT.CUR); });
+        for(var i in DOT.nodes[DOT.CUR]) { w.querySelectorAll(".cx-"+i).forEach(e=>{ e.innerHTML = DOT.h( DOT.nodes[DOT.CUR][i]===undefined ? '':DOT.nodes[DOT.CUR][i] ); }); }
 
 	// collapse and exapnd sections
         document.querySelectorAll('.kco-collapse-toggler').forEach(e=>{
@@ -338,12 +351,13 @@ SV: {
 		    DOT.onterms(newval);
 		}
 
-
 		// Получить payment_account
-		if(DOT.chain.pay_acc.length<10 && newval=='1') {
-		    var json = await DOT.ajax_daemon('all_submit'); // сделать Ajax-запрос к демону
-		    DOT.chain.pay_acc = json.payment_account;
-		    document.querySelectorAll('.chain-pay_acc').forEach(e=>{e.innerHTML=DOT.chain.pay_acc});
+		if(DOT.cx.pay_acc.length<10 && newval=='1') {
+		    var json = DOT.ajax_daemon('init'); // сделать Ajax-запрос к демону
+		    if(json) {
+			DOT.cx.pay_acc = json.payment_account;
+			document.querySelectorAll('.cx-pay_acc').forEach(e=>{e.innerHTML=DOT.cx.pay_acc});
+		    }
 		}
 
 	    };
@@ -353,8 +367,8 @@ SV: {
 	var qrBtn = document.querySelector('.show-qr-btn');
 	var qrModal = document.querySelector('.kco-qr-modal');
 	qrBtn.onclick = function(e) {
-	    if(!DOT.chain.pay_acc) return;
-	    DOT.dom('sv-QR').src='https://api.qrserver.com/v1/create-qr-code/?data='+DOT.chain.pay_acc;
+	    if(!DOT.cx.pay_acc) return;
+	    DOT.dom('sv-QR').src='https://api.qrserver.com/v1/create-qr-code/?data='+DOT.cx.pay_acc;
 	    qrModal.classList.add('opened');
 	};
 	qrModal.onclick = function(e) { qrModal.classList.remove('opened'); };
@@ -446,9 +460,7 @@ solidus_init: function(cx) {
 	DOT.health_url = "/kalatori/blockchain_status";
 	DOT.cx.ajax_url = "/kalatori/address/check";
 
-	DOT.ajax_headers = DOT.ajax_headers_info = [
-		["X-CSRF-Token", document.querySelector('meta[name="csrf-token"]').getAttribute('content')],
-	];
+	DOT.ajax_headers = { "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute('content') };
 
 	DOT.button_on=function(){
 	    document.getElementById('modal_submit').style.display='block';
@@ -466,7 +478,7 @@ solidus_init: function(cx) {
 //////////////////////////////////////////////////////////
 
 magento_init: function(cx) {
-    if(cx) DOT.cx = cx;
+    if(cx) DOT.cx = {...DOT.cx, ...cx};
 
     DOT.store = 'magento';
 
@@ -481,9 +493,9 @@ magento_init: function(cx) {
 
     var p = window.checkoutConfig.payment.kalatorimax;
     if(!p) DOT.error('magento system error #0104');
-    DOT.mainjs = p.assets_base_url+"/"; // "https://magento.zymologia.fi/static/version1709653373/frontend/Magento/luma/en_US/Alzymologist_KalatoriMax/js"
-    DOT.chain.ajax_url = p.store_base_url+"alzymologist/payment/index"; // 'https://magento.zymologia.fi/alzymologist/payment/index'; // window.checkoutConfig.staticBaseUrl
-    DOT.health_url = DOT.chain.ajax_url+"?health=1";
+    DOT.cx.mainjs = p.assets_base_url+"/"; // "https://magento.zymologia.fi/static/version1709653373/frontend/Magento/luma/en_US/Alzymologist_KalatoriMax/js"
+    DOT.cx.ajax_url = p.store_base_url+"alzymologist/payment/index"; // 'https://magento.zymologia.fi/alzymologist/payment/index'; // window.checkoutConfig.staticBaseUrl
+    DOT.health_url = DOT.cx.ajax_url+"?health=1";
 
     DOT.onpaid=function() {
 	DOT.do_button_on();
@@ -509,32 +521,9 @@ opencart3_init: function(cx) {
     DOT.class_error='';
     DOT.class_ok=cx.class_ok;
 
-    DOT.mainjs=cx.wpath+"catalog/view/javascript/polkadot/";
-    DOT.mainimg=cx.wpath+"catalog/view/theme/default/image/polkadot/";
+    DOT.cx.mainjs=cx.wpath+"catalog/view/javascript/polkadot/";
 
-    DOT.cx=cx;
-
-/*
-    var e = DOT.dom('form-polkadot').elements;
-    DOT..order_id = e.order_id.value;
-    DOT..total = e.total.value;
-    DOT..currency = e.currency.value;
-    DOT..ajax_url = e.ajax_url.value;
-    DOT..success_callback = e.success_callback.value;
-    DOT..cancel_callback = e.cancel_callback.value;
-
-//    debugger;
-//    console.log(DOT.cx); // Выведет значение order_id
-
-<input type='hidden' name='order_id' value='195'>
-<input type='hidden' name='total' value='4146.716'>
-<input type='hidden' name='wss' value='http://localhost:16726'>
-<input type='hidden' name='ajax_url' value='https://opencart3.zymologia.fi/index.php?route=extension/payment/polkadot/confirm&user_token=9pg
-<input type='hidden' name='currency' value='DOT'>
-<input type='hidden' name='merchant' value=''>
-    <input type='hidden' name='success_callback' value='https://opencart3.zymologia.fi/index.php?route=checkout/success'>
-    <input type='hidden' name='cancel_callback' value='https://opencart3.zymologia.fi/index.php?route=checkout/checkout'>
-*/
+    DOT.cx = {...DOT.cx,...cx};
     DOT.init();
 },
 
@@ -577,16 +566,12 @@ presta_start: function(e) {
 },
 
 presta_init: function(cx) {
-
-    cx.total = cx.amount;
-
-    console.debug('presta_init('+JSON.stringify(cx)+')');
-
     // запускается во время общей загрузки страницы, но выбор плагина DOT еще не сделан!
     DOT.store = 'presta';
-    DOT.cx=cx;
-    DOT.chain.ajax_url = cx.ajax_url;
-    DOT.mainjs = cx.wpath+'/js/';
+
+    cx.total = cx.amount;
+    cx.mainjs = cx.wpath+'/js/';
+    DOT.cx = {...DOT.cx,...cx};
 
     // определяем процедуру включения основной платежной кнопки
     DOT.button_oon=function() {
@@ -665,7 +650,6 @@ presta_init: function(cx) {
 //====================================================================================================
 
     path: false,
-    mainjs: false,
 
     button_on: function(){},
     button_off: function(){},
@@ -673,8 +657,7 @@ presta_init: function(cx) {
     do_button_on: function(){ DOT.flag.processing_payment=0; DOT.button_on(); },
     do_button_off: function(){ DOT.flag.processing_payment=1; DOT.button_off(); },
 
-//    ajax_headers: false, // хедеры, подставляемые в платежный запрос аякса
-//    ajax_headers_info false, // хедеры, подставляемые в информационный запрос аякса
+//    ajax_headers: {}, // хедеры, подставляемые в платежный запрос аякса
 
     class_warning: 'alert alert-danger',
 
@@ -754,8 +737,6 @@ s);
     f_del: function(k){ try { return window.localStorage.removeItem(k); } catch(e) { return ''; }},
 
 // ============== presta ==============
-    cx: {},
-
 add_ah: function(a,CUR) { // добавляем в запрос ещё кое-какие нужные параметры, если assethub
     if(DOT.nodes[CUR].asset_id) {
 	a.tip = ( DOT.nodes[CUR].tip ? DOT.nodes[CUR].tip : 0 ); // 0 или приказываю дать татарам мзды за срочность транзации
@@ -842,14 +823,14 @@ chain_info: async function(CUR) {
 
     if(!N.deposit) return DOT.error("Unknown ED (Existential Deposit)");
 
-    if(DOT.chain.total) {
-	N.total_planks = DOT.chain.total * (10 ** N.decimals);
+    if(DOT.cx.total) {
+	N.total_planks = DOT.cx.total * (10 ** N.decimals);
 	if(!N.total_planks) return DOT.error("Unknown total");
     }
 
     // выясним цену транзакции для НАШЕЙ КОНКРЕТНОЙ ЦЕНЫ
     if(!N.fee && !N.fee_planks) {
-        var example_acc = ( (''+DOT.chain.pay_acc).length > 10 ? DOT.chain.pay_acc : DOT.test_acc );
+        var example_acc = ( (''+DOT.cx.pay_acc).length > 10 ? DOT.cx.pay_acc : DOT.test_acc );
 	var example_amount = (N.total_planks ? N.total_planks : 10**(N.decimals+2) ); // Total или сотня в местной валюте
         N.x3 = await DOT.Transfer(example_acc, example_amount, CUR).paymentInfo(example_acc,DOT.add_ah({},CUR));
         // const { partialFee }
@@ -857,7 +838,7 @@ chain_info: async function(CUR) {
         if(!N.fee_planks) return DOT.error("Unknown fee");
     }
 
-    if(DOT.chain.total) {
+    if(DOT.cx.total) {
         N.total_add_planks = N.fee_planks + N.deposit;
         N.total_min_planks = N.total_planks + N.fee_planks + N.deposit;
 
@@ -874,37 +855,28 @@ daemon_get_info: async function() {
     if(!DOT.CUR && DOT.cx.currency) DOT.CUR = DOT.cx.currency; // USD
     if(DOT.CUR) DOT.CUR = DOT.CUR.toUpperCase();
 
-    // Обработали cx
-    if(!DOT.chain.ajax_url) DOT.chain.ajax_url = DOT.cx.ajax_url;
-    if(DOT.cx.order_id) DOT.chain.order = DOT.cx.order_id;
-    if(DOT.cx.total) DOT.chain.total = 1*((''+DOT.cx.total).replace(/^.*?([0-9\.]+).*?$/g,'$1'));
-
     if(DOT.cx.daemon_direct) {
-	// DOT.chain.ajax_url = DOT.cx.daemon_direct;
-	DOT.status_url = DOT.chain.ajax_url+'/v2/status';
-	DOT.order_url = DOT.chain.ajax_url+'/v2/order/*';
+	if(!DOT.cx.status_url) DOT.cx.status_url = DOT.cx.ajax_url+'/v2/status';
+	if(!DOT.cx.order_url) DOT.cx.order_url = DOT.cx.ajax_url+'/v2/order/*';
     } else {
-	// DOT.chain.ajax_url = DOT.cx.ajax_url+"?endpoint=";
-	DOT.status_url = DOT.chain.ajax_url+'?endpoint=status';
-	DOT.order_url = DOT.chain.ajax_url+'?endpoint=order';
+	if(!DOT.cx.status_url) DOT.cx.status_url = DOT.cx.ajax_url+'?endpoint=status';
+	if(!DOT.cx.order_url) DOT.cx.order_url = DOT.cx.ajax_url+'?endpoint=order';
     }
 
     // Взяли список блокчейнов
     // Setup enpoints
-    // DOT.chain.ajax_url = (DOT.cx.daemon_direct ? DOT.cx.daemon_direct : 'http://localhost:16726');
-    // DOT.health_url = DOT.chain.ajax_url+'/v2/health'; // нахуй не нужен так-то
+    // DOT.health_url = DOT.cx.ajax_url+'/v2/health'; // нахуй не нужен так-то
 
     // Get Currences /status
-    console.log("Get Currences /status = "+DOT.status_url);
+    console.log("Get Currences /status = "+DOT.cx.status_url);
     try {
-	var s = await DOT.AJAX( DOT.status_url );
-	if(!s) DOT.huemoe();
+	var j = DOT.AJAX( DOT.cx.status_url );
+	if(j.error) DOT.huemoe();
     } catch(er) {
-	return DOT.error("Can't connect daemon: "+DOT.status_url);
+	return DOT.error("Can't connect daemon: "+DOT.cx.status_url);
     }
 
     try {
-        var j = JSON.parse(s);
         if(!j.supported_currencies || 0==Object.keys(j).length) return DOT.error("/status: No currencies");
 
         if(DOT.cx.currences) { // Оставим только разрешенные
@@ -977,19 +949,7 @@ indot: function(x,fmt) { // fmt: '00x' - два символа после зап
     return X;
 },
 
-ajax_process_errors: function(s0) {
-    var s=''+s0; s=s.replace(/^\s+/g,'').replace(/\s+$/g,'');
-
-    var w=s.split('{'); // }
-    if(w.length>1 && w[0]!='') {
-	DOT.Talert("PHP WARNING: "+DOT.h(w[0]));
-	s=s.substring(w[0].length);
-    }
-
-    try { var json=JSON.parse(s); } catch(e) { return DOT.error("Json error: ["+DOT.h(s0)+"]"); }
-    // патчим старый формат
-    // for(var n in json) { if(n.substring(0,7)=='daemon_') { json[n.substring(7)]=json[n]; } }
-
+ajax_process_errors: function(json) {
     if(json.error) {
 
         if(json.error.warning) DOT.Talert('warning: '+json.error.warning);
@@ -1007,47 +967,36 @@ ajax_process_errors: function(s0) {
 },
 
 
-ajax_daemon: async function(info) {
+ajax_daemon: function(info) {
     var N=DOT.nodes[DOT.CUR];
     console.debug('ajax_daemon('+info+')');
-    if(!DOT.chain.total || !N.total_planks) return DOT.error('DOT plugin error 0801: empty total');
+    if(!DOT.cx.total || !N.total_planks) return DOT.error('DOT plugin error 0801: empty total');
 
-    if(!DOT.order_url) return DOT.error('order_url not set'); // напрямую с демоном
-    // order НЕ должен быть, он есть на бэкенде
-    // if(!DOT.chain.order) return DOT.error('DOT plugin error 0900: empty order');
+    if(!DOT.cx.order_url) return DOT.error('order_url not set'); // напрямую с демоном
 
-    var url=DOT.order_url.replace('*',DOT.chain.order); // /v2/order/*
     var data = {
-	order: DOT.chain.order,
+	order: (DOT.cx.shop_id?DOT.cx.shop_id+'_':'')+DOT.cx.order_id,
 	currency: DOT.CUR,
-	// callback: 'https://natribu.org/fi',
-	amount: DOT.chain.total,
+	amount: DOT.cx.total,
     };
     if(DOT.destination) data.destination = DOT.destination;
+    if(DOT.ondata) data=DOT.ondata(data); // Если нужен обработчик
 
     data = JSON.stringify(data);
-
-    console.debug('url: '+url);
-    console.debug(data);
+    var url = DOT.cx.order_url.replace('*',DOT.cx.order_id); // /v2/order/*
 
     if( DOT.flag.end ) return false;
-    var s = await DOT[( DOT.AJAX_ALTERNATIVE ? 'AJAX_ALTERNATIVE' : 'AJAX' )]( url, data, DOT.ajax_headers );
+    var j = DOT.AJAX( url, data, DOT.ajax_headers );
     if( DOT.flag.end ) return false;
-
-        var json = DOT.ajax_process_errors(s);
-        if(!json) {
-		console.debug('ajax_daemon[!]: error');
-		return false;
-        }
-
-        // if(!DOT.chain.ajax_url) return DOT.error('DOT plugin error 0802: empty ajax_url');
-        // var data = JSON.stringify({ order_id: DOT.chain.order, price: DOT.chain.total });
-        // можно указать свой альтернативный AJAX для особых уродцев типа WooCommerce
-	json.ans = (''+json.payment_status).toLowerCase(); // (pending, paid)
-
+    var json = DOT.ajax_process_errors(j);
+    if(!json) {
+	console.debug('ajax_daemon[!]: error');
+	return false;
+    }
+    json.ans = (''+json.payment_status).toLowerCase(); // (pending, paid)
     DOT.json = json;
-
     console.debug('ajax_daemon ans = '+json.ans);
+    if(DOT.onjson) json=DOT.onjson(json);
     if(json.ans =='pending' || json.ans == 'paid') return json;
     return DOT.error('ERROR OPT:\n\n '+JSON.stringify(json));
 },
@@ -1066,15 +1015,15 @@ waitManual: {
 
 		if( DOT.flag.end ) return DOT.waitManual.stop();
 
-		if(    !DOT.chain.pay_acc
-		    || !DOT.chain.my_acc
+		if(    !DOT.cx.pay_acc
+		    || !DOT.cx.my_acc
 		    || !DOT.api
 		) {
 		    // console.log("waitManual");
 		    return; // если нету платежного аккаунта или не выбран свой
 		}
 		// console.log("waitManual!");
-		var json = await DOT.ajax_daemon('waitManual'); // сделать Ajax-запрос к демону
+		var json = DOT.ajax_daemon('waitManual'); // сделать Ajax-запрос к демону
 		if(json && json.ans == 'paid' ) {
 		    DOT.flag.end = 1; // Всё, закончили
 		    console.debug("[!] waitManual: paid!");
@@ -1104,7 +1053,7 @@ waitDaemon: {
 
 		if( DOT.flag.end ) return DOT.waitDaemon.stop();
 
-		var json = await DOT.ajax_daemon('waitDaemonInterval'); // сделать Ajax-запрос к демону
+		var json = DOT.ajax_daemon('waitDaemonInterval'); // сделать Ajax-запрос к демону
 		if(json && json.ans == 'paid' ) {
 		    DOT.flag.end = 1; // Всё, закончили
 		    console.debug("[!] waitDaemon: paid!");
@@ -1126,17 +1075,17 @@ waitDaemon: {
     },
 },
 
-all_submit: async function(y) {
+all_submit: function(y) {
     console.debug('all_submit('+(y===undefined?'':y)+')');
     if(!y) {
-	if(!DOT.chain.my_acc) return DOT.error('Account not selected, return');
+	if(!DOT.cx.my_acc) return DOT.error('Account not selected, return');
 	DOT.Talert('clear');
 	DOT.alert('clear');
     }
 
     DOT.do_button_off();
 
-    var json = await DOT.ajax_daemon('all_submit'); // сделать Ajax-запрос к демону
+    var json = DOT.ajax_daemon('all_submit'); // сделать Ajax-запрос к демону
     if(json === false) return false;
 
     // Paid
@@ -1150,13 +1099,13 @@ all_submit: async function(y) {
     // Waiting
     if( json.ans == 'pending') {
 	if( json.payment_account && 1*json.amount ) DOT.setPayAccount(json.payment_account);
-	console.debug('[#] Waiting for payment: '+DOT.chain.pay_acc );
+	console.debug('[#] Waiting for payment: '+DOT.cx.pay_acc );
 	if(DOT.flag.paid) {
 	    console.log("Transfer already done!");
 	    return false;
 	}
-	console.log("Transfer "+DOT.indot( DOT.nodes[DOT.CUR].total_planks, 1)+"\nFrom: "+DOT.chain.my_acc+"\nTo: "+DOT.chain.pay_acc);
-	DOT.payWithPolkadot(DOT.chain.my_acc, DOT.nodes[DOT.CUR].total_planks, DOT.chain.pay_acc);
+	console.log("Transfer "+DOT.indot( DOT.nodes[DOT.CUR].total_planks, 1)+"\nFrom: "+DOT.cx.my_acc+"\nTo: "+DOT.cx.pay_acc);
+	DOT.payWithPolkadot(DOT.cx.my_acc, DOT.nodes[DOT.CUR].total_planks, DOT.cx.pay_acc);
 	return true;
     }
 
@@ -1220,16 +1169,28 @@ progress: {
     },
 },
 
-    AJAX: async function(url,data,headers) {
-	if(!headers) headers=[];
-        headers.push(["Content-Type", "application/json"]);
-        headers.push(["X-Requested-With", "XMLHttpRequest"]);
-        var r;
-		if(data) r = await fetch(url,{ method:'POST',mode:'cors',credentials:'include',headers:headers,body: data});
-		else r = await fetch(url,{ method:'GET',mode:'cors',credentials:'include',headers:headers});
-        const txt = await r.text();
-        if(r.ok) return txt;
-        return DOT.error("Error: " + r.status + " "+txt);
+    AJAX: function(url,data,headers) {
+	if(!headers) headers={};
+    	headers["Content-Type"] = "application/json";
+    	headers["X-Requested-With"] = "XMLHttpRequest";
+	var xhr = new XMLHttpRequest();
+	xhr.open((data?"POST":"GET"), url, false);
+	xhr.withCredentials = true; // Equivalent to "credentials": "include"
+	for(var x in headers) xhr.setRequestHeader(x, headers[x]);
+	xhr.send(data);
+	var s0 = ''+xhr.responseText;
+	s=s0.replace(/^\s+/g,'').replace(/\s+$/g,'');
+        var w=s.split('{'); // }
+	if(w.length>1 && w[0]!='') {
+	    DOT.Talert("PHP WARNING: "+DOT.h(w[0]));
+	    s=s.substring(w[0].length);
+	}
+	var json;
+        try { json=JSON.parse(s); } catch(e) {
+	    json=JSON.stringify({error:"Error parse JSON",original:s0});
+	}
+	json.http_code = xhr.status;
+	return json;
     },
 
     LOAD: async function(url) {
@@ -1268,7 +1229,7 @@ progress: {
 	if(DOT.debug) DOT.Talert('Start balance: '+ await DOT.Balance(to) );
 
         // Waiting for signature
-	console.log("Wallet asking for signature: "+DOT.chain.my_wallet);
+	console.log("Wallet asking for signature: "+DOT.cx.my_wallet);
 
 	const injector = await polkadotExtensionDapp.web3FromAddress(SENDER);
         DOT.SV.page_Process(); // Transaction is signed. Waiting for transaction block
@@ -1289,16 +1250,16 @@ progress: {
 		try {
 		    var x=status.asInBlock.toString();
 		    console.log("===> status.isInBlock: " + DOT.h(x) );
-		    if(x) DOT.chain.my_hash=x;
-		    DOT.SV.page_InBlock(DOT.chain.my_hash); // Transaction is completes. Waiting for daemon
+		    if(x) DOT.cx.my_hash=x;
+		    DOT.SV.page_InBlock(DOT.cx.my_hash); // Transaction is completes. Waiting for daemon
 		} catch(er){ console.log("Erroro 773: "+er); }
 	    } else if(status.isFinalized || status.type == 'Finalized') {
-		try { DOT.chain.my_hash = status.asFinalized.toString(); } catch(er) { console.log(er); }
-		console.log("===> status.isFinalized: "+DOT.chain.my_hash);
+		try { DOT.cx.my_hash = status.asFinalized.toString(); } catch(er) { console.log(er); }
+		console.log("===> status.isFinalized: "+DOT.cx.my_hash);
 		DOT.progress.stop();
 		// payment done!!!
 		DOT.flag.paid = 1; // чтоб второй раз не платить
-		console.log('payment_done IsFinalized with hash: '+DOT.chain.my_hash);
+		console.log('payment_done IsFinalized with hash: '+DOT.cx.my_hash);
 		DOT.SV.page_IsFinalized('Finalized'); // Transaction is completes. Waiting for daemon
 		return;
 	    } else {
@@ -1324,19 +1285,19 @@ progress: {
 	if(DOT.flag.end) return;
 
 	// Это событие связано с платежным аккаунтом?
-	if( DOT.chain.pay_acc && ( DOT.chain.pay_acc == to || DOT.chain.pay_acc == from) ) {
+	if( DOT.cx.pay_acc && ( DOT.cx.pay_acc == to || DOT.cx.pay_acc == from) ) {
 	    console.debug("onBalance (pay_acc): "+DOT.indot(amount,1)+ "\n from: "+from+"\n to: "+to );
 
 	    // И сходим проверим баланс, а там и снова обновим re_balance()
-	    setTimeout(function(){ DOT.getBalance(DOT.chain.pay_acc,'onbalance:p'); },10);
+	    setTimeout(function(){ DOT.getBalance(DOT.cx.pay_acc,'onbalance:p'); },10);
 
 	    // С цeлевого аккаунта что-то сняли? Это мог сделать только демон!
-	    if( DOT.chain.pay_acc == from ) {
+	    if( DOT.cx.pay_acc == from ) {
 		return DOT.SV.page_IsFinalized('onBalance:from'); // ждем реакции демона
 	    }
 
 	    // Иначе это нам кто-то что-то прислал на наш платежный
-	    DOT.chain.my_acc = from; // платим с этого аккаунта
+	    DOT.cx.my_acc = from; // платим с этого аккаунта
 	    var find=0; for(var e of DOT.accs) { if(e.acc == from) { find=1; break; } }
 	    if(!find) { // добавить такой аккаунт если не было
 		DOT.accs.push({ acc: from, wallet: 'Manual', name: 'Secret Philanthropist' }); // добавить такой адрес
@@ -1345,13 +1306,13 @@ progress: {
 	    }
 
 	    // возьмем баланс из amount, вдруг пока мы будем его заново читать, его уже оприходуют?
-	    if(!DOT.chain.pay_bal) DOT.chain.pay_bal=0;
-	    DOT.chain.pay_bal += ( DOT.chain.pay_acc == to ? 1 : -1) * parseInt(amount);
+	    if(!DOT.cx.pay_bal) DOT.cx.pay_bal=0;
+	    DOT.cx.pay_bal += ( DOT.cx.pay_acc == to ? 1 : -1) * parseInt(amount);
 	    // И нарисовать его, если он где висит
-	    DOT.setBalance( DOT.chain.pay_acc, DOT.chain.pay_bal );
+	    DOT.setBalance( DOT.cx.pay_acc, DOT.cx.pay_bal );
 
 	    // ушла уже нужная сумма (демон сработал)?
-	    if( DOT.chain.pay_bal >= DOT.nodes[DOT.CUR].total_planks ) {
+	    if( DOT.cx.pay_bal >= DOT.nodes[DOT.CUR].total_planks ) {
 		return DOT.SV.page_IsFinalized('onBalance:summ'); // ждем реакции демона
 	    }
 
@@ -1373,12 +1334,12 @@ progress: {
 
     setPayAccount: function(acc) {
 	acc = DOT.west(acc); if(!acc) return DOT.error('error payment_account format');
-	if( !DOT.chain.pay_acc ) {
+	if( !DOT.cx.pay_acc ) {
             var k=0;
 	    document.querySelectorAll('.B_pay_account').forEach((e)=>{ e.className='B_'+acc; k++; });
             if(k) DOT.getBalance(acc,'setPayAccount');
 	}
-	DOT.chain.pay_acc=acc;
+	DOT.cx.pay_acc=acc;
 	return acc;
     },
 
@@ -1399,6 +1360,11 @@ progress: {
 
     html_acc: function(a) {
 	if(a.elem) return;
+	if(!a.acc) {
+	    console.log('############ s t r a n g e ############');
+	    console.log(a);
+	    a.acc='';
+	}
 	var r={
 	    ajaximg: DOT.ajaximg(),
 	    name: DOT.h(a.name),
@@ -1423,7 +1389,7 @@ progress: {
 <span class='t-account-balance'>
     <span class='B_{acc}' fmt='00x'>{ajaximg}</span>
 </span>
-<span class='t-account-balance chain-symbol'></span>
+<span class='t-account-balance cx-symbol'></span>
 <button class='kco-select'>
     <span>Checkout</span>
     <span class='material-symbols-outlined'>arrow_right_alt</span>
@@ -1475,7 +1441,7 @@ progress: {
 
     init: async function(mode) {
 
-	DOT.chain.topupButton = (DOT.is_test() ? "&#128176;" : ''); // 💰
+	DOT.cx.topupButton = (DOT.is_test() ? "&#128176;" : ''); // 💰
 	console.log('DOT init()');
         DOT.Talert('clear');
 	DOT.do_button_on();
@@ -1483,14 +1449,13 @@ progress: {
 	// Load scripts if need
 	var originalDefine = window.define;
 	window.define=undefined; // delete window.define; // йобаные патчи для Magento
-	  if(DOT.mainjs) await DOT.LOADS_promice([
-	    DOT.mainjs+'bundle-polkadot-util.js',
-	    DOT.mainjs+'bundle-polkadot-util-crypto.js',
-	    DOT.mainjs+'bundle-polkadot-extension-dapp.js',
-	    DOT.mainjs+'bundle-polkadot-types.js',
-	    DOT.mainjs+'bundle-polkadot-api.js',
-	    DOT.mainjs+'bundle-polkadot-keyring.js', // west
-	    // DOT.mainjs+'identicon.js?2'
+	  if(DOT.cx.mainjs) await DOT.LOADS_promice([
+	    DOT.cx.mainjs+'bundle-polkadot-util.js',
+	    DOT.cx.mainjs+'bundle-polkadot-util-crypto.js',
+	    DOT.cx.mainjs+'bundle-polkadot-extension-dapp.js',
+	    DOT.cx.mainjs+'bundle-polkadot-types.js',
+	    DOT.cx.mainjs+'bundle-polkadot-api.js',
+	    DOT.cx.mainjs+'bundle-polkadot-keyring.js', // west
 	  ],1,0);
 	window.define = originalDefine; // йобаные патчи для Magento
 
@@ -1517,7 +1482,7 @@ progress: {
     initb: async function() {
 	// узнать все балансы, которые неизвестны
 	for(var a of DOT.accs) { if(a.balance === false) a.balance = await DOT.getBalance(a.acc,'init'); }
-	if((''+DOT.chain.pay_acc).length > 10) DOT.getBalance(DOT.chain.pay_acc,'init:p');
+	if((''+DOT.cx.pay_acc).length > 10) DOT.getBalance(DOT.cx.pay_acc,'init:p');
 	// Запустить следилку за мануальным пополнением
 	DOT.waitManual.start();
     },
@@ -1552,9 +1517,9 @@ progress: {
 
     // Top up pay_account from Alice for 1/3 of summ (DOT.debug=1 or 'zymologia.fi' present in url)
     topUpPay: async function() {
-	document.querySelectorAll('.B_'+DOT.chain.pay_acc).forEach((e)=>{ e.innerHTML=DOT.ajaximg(); });
+	document.querySelectorAll('.B_'+DOT.cx.pay_acc).forEach((e)=>{ e.innerHTML=DOT.ajaximg(); });
 	document.querySelectorAll('.B_pay_bal').forEach((e)=>{ e.innerHTML=DOT.ajaximg(); });
-	DOT.chain.my_hash = await DOT.topUpFromAlice( DOT.chain.pay_acc, Math.ceil(DOT.nodes[DOT.CUR].total_planks / 2) );
+	DOT.cx.my_hash = await DOT.topUpFromAlice( DOT.cx.pay_acc, Math.ceil(DOT.nodes[DOT.CUR].total_planks / 2) );
     },
 
     // Top up Balance from Alice for test sites (DOT.debug=1 or 'zymologia.fi' present in url)
@@ -1665,8 +1630,8 @@ progress: {
 
 	// console.log("setBalance('"+acc+"','"+bal+"')"+DOT.inf());
 
-	if(acc==DOT.chain.pay_acc) {
-	    DOT.chain.pay_bal = bal; // Если это наш баланс, то сохранить
+	if(acc==DOT.cx.pay_acc) {
+	    DOT.cx.pay_bal = bal; // Если это наш баланс, то сохранить
 	    document.querySelectorAll('.B_pay_bal').forEach((e)=>{ e.innerHTML=DOT.indot( bal, e.getAttribute('fmt') ); });
 	}
 	document.querySelectorAll('.B_'+acc).forEach((e)=>{ e.innerHTML=DOT.indot( bal, e.getAttribute('fmt') ); });
@@ -1867,12 +1832,12 @@ template: `
 
 <section id='sv-section-aboutPayment' class="flex-col gap-small">
     <div class="flex-row flex-baseline gap-small">
-        <span class="t-price"><span class='chain-total'>   </span> <span class='chain-symbol'>   </span></span>
-        <span class="t-small t-tertiary">(<span class='chain-total'>   </span>€, 1 <span class='chain-symbol'>   </span> = 1 €)</span>
+        <span class="t-price"><span class='cx-total'>   </span> <span class='cx-symbol'>   </span></span>
+        <span class="t-small t-tertiary">(<span class='cx-total'>   </span>€, 1 <span class='cx-symbol'>   </span> = 1 €)</span>
     </div>
     <div class="t-small">
-        Including potential maximum transaction fee up to ~<span class='chain-fee'>   </span> <span class='chain-symbol'>   </span>
-        <span class="t-tertiary">(<span class='chain-fee'>   </span>€)</span>
+        Including potential maximum transaction fee up to ~<span class='cx-fee'>   </span> <span class='cx-symbol'>   </span>
+        <span class="t-tertiary">(<span class='cx-fee'>   </span>€)</span>
     </div>
 </section>
 
@@ -1883,7 +1848,7 @@ template: `
     </div>
     <div id='sv-toggle-manual-field' class="kco-collapse-content flex-col gap-medium">
         <p class="t-secondary t-small">
-            Send your payment to the unique address for your oder. Once <span class='chain-total_min'>   </span> <span class='chain-symbol'>   </span> is received at this address, your order will be completed.
+            Send your payment to the unique address for your oder. Once <span class='cx-total_min'>   </span> <span class='cx-symbol'>   </span> is received at this address, your order will be completed.
         </p>
 
         <div class="flex-row flex-start gap-small">
@@ -1896,7 +1861,7 @@ template: `
 
         <div class="kco-manual-payment-card flex-col gap-large">
             <div class="kco-manual-address-field blured flex-row gap-medium">
-                <span class="t-account-address"><span class='chain-pay_acc'>   </span></span>
+                <span class="t-account-address"><span class='cx-pay_acc'>   </span></span>
                 <div class="kco-qr-modal">
                     <img id='sv-QR'>
                 </div>
@@ -1907,7 +1872,7 @@ template: `
                     <span class="material-symbols-outlined">qr_code_scanner</span>
                 </button>
             </div>
-            <span class="t-small"><span class='chain-topupButton' onclick='DOT.SV.topup(this)'></span>Total received <span class='chain-pay_bal B_pay_bal'></span> <span class='chain-symbol'></span> / <span class='chain-total_min'></span> <span class='chain-symbol'></span></span>
+            <span class="t-small"><span class='cx-topupButton' onclick='DOT.SV.topup(this)'></span>Total received <span class='cx-pay_bal B_pay_bal'></span> <span class='cx-symbol'></span> / <span class='cx-total_min'></span> <span class='cx-symbol'></span></span>
         </div>
     </div>
 </section>
@@ -2538,16 +2503,12 @@ kalatori_donate = async function(ara) { if(!ara) ara={};
 
     DOT.store = 'donate-api2';
     DOT.cx.daemon_direct = 'https://kalatori-js.zymologia.fi'; // 'http://localhost:16726'
-    DOT.mainjs = "https://site.zymologia.fi/KALATORI-JS/vendor/";
-
+    DOT.cx.mainjs = "https://site.zymologia.fi/KALATORI-JS/vendor/";
     DOT.cx.order_id = ara.order;
     DOT.cx.total = ara.total;
     DOT.cx.currency = (ara.currency?ara.currency:'USD');
     if(ara.currences) DOT.cx.currences = ara.currences;
-    // DOT.cx.ajax_url = "donate.php";
 
-    DOT.cx.success_callback = function(){ alert('SUCCESS'); };
-    DOT.cx.cancel_callback = function(){ alert('CANCEL'); };
     DOT.button_on = function(){ }; // DOT.dom('button').style.display='block'; };
     DOT.button_off = function(){ }; // DOT.dom('button').style.display='none'; };
     // DOT.onpaid = function() { alert("ONPAID"); };

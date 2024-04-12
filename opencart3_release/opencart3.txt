@@ -17,11 +17,11 @@ catalog-language.php                | upload/catalog/language/en-gb/extension/pa
 catalog-model.php                   | upload/catalog/model/extension/payment/polkadot.php
 catalog-template.twig               | upload/catalog/view/theme/default/template/extension/payment/polkadot.twig
 
-../../common/img/ajaxm.gif  	| upload/catalog/view/theme/default/image/polkadot/*
+# ../../common/img/ajaxm.gif  	| upload/catalog/view/theme/default/image/polkadot/*
 ../../common/img/Alzymologist_.png  | upload/catalog/view/theme/default/image/polkadot/*
 ../../common/img/polkadot.webp      | upload/catalog/view/theme/default/image/polkadot/*
 ../../common/DOT.js                 | upload/catalog/view/javascript/polkadot/*
-../../common/identicon.js           | upload/catalog/view/javascript/polkadot/*
+#../../common/identicon.js           | upload/catalog/view/javascript/polkadot/*
 
 ../../common/vendor/bundle-polkadot-api.js             | upload/catalog/view/javascript/polkadot/*
 ../../common/vendor/bundle-polkadot-extension-dapp.js  | upload/catalog/view/javascript/polkadot/*

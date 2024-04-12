@@ -521,10 +521,10 @@ opencart3_init: function(cx) {
     DOT.class_error='';
     DOT.class_ok=cx.class_ok;
 
-    DOT.cx.mainjs=cx.wpath+"catalog/view/javascript/polkadot/";
+    cx.mainjs=cx.wpath+"catalog/view/javascript/polkadot/";
 
     DOT.cx = {...DOT.cx,...cx};
-    DOT.init();
+    DOT.design();
 },
 
 opencart3_submit: function() {
@@ -825,6 +825,7 @@ chain_info: async function(CUR) {
 
     if(DOT.cx.total) {
 	N.total_planks = DOT.cx.total * (10 ** N.decimals);
+	N.total_planks = Math.ceil(N.total_planks); // 131199999.99999999 ах ты ж сука блять
 	if(!N.total_planks) return DOT.error("Unknown total");
     }
 
@@ -839,6 +840,7 @@ chain_info: async function(CUR) {
     }
 
     if(DOT.cx.total) {
+
         N.total_add_planks = N.fee_planks + N.deposit;
         N.total_min_planks = N.total_planks + N.fee_planks + N.deposit;
 
@@ -849,7 +851,6 @@ chain_info: async function(CUR) {
 
 },
 
-
 daemon_get_info: async function() {
 
     if(!DOT.CUR && DOT.cx.currency) DOT.CUR = DOT.cx.currency; // USD
@@ -859,8 +860,8 @@ daemon_get_info: async function() {
 	if(!DOT.cx.status_url) DOT.cx.status_url = DOT.cx.ajax_url+'/v2/status';
 	if(!DOT.cx.order_url) DOT.cx.order_url = DOT.cx.ajax_url+'/v2/order/*';
     } else {
-	if(!DOT.cx.status_url) DOT.cx.status_url = DOT.cx.ajax_url+'?endpoint=status';
-	if(!DOT.cx.order_url) DOT.cx.order_url = DOT.cx.ajax_url+'?endpoint=order';
+	if(!DOT.cx.status_url) DOT.cx.status_url = DOT.cx.ajax_url+(DOT.cx.ajax_url.indexOf('?')<0?'?':'&')+'endpoint=status';
+	if(!DOT.cx.order_url) DOT.cx.order_url = DOT.cx.ajax_url+(DOT.cx.ajax_url.indexOf('?')<0?'?':'&')+'endpoint=order&currency=@';
     }
 
     // Взяли список блокчейнов
@@ -984,6 +985,7 @@ ajax_daemon: function(info) {
 
     data = JSON.stringify(data);
     var url = DOT.cx.order_url.replace('*',DOT.cx.order_id); // /v2/order/*
+    var url = DOT.cx.order_url.replace('@',DOT.CUR); // /v2/order/*
 
     if( DOT.flag.end ) return false;
     var j = DOT.AJAX( url, data, DOT.ajax_headers );
@@ -1189,7 +1191,7 @@ progress: {
         try { json=JSON.parse(s); } catch(e) {
 	    json=JSON.stringify({error:"Error parse JSON",original:s0});
 	}
-	json.http_code = xhr.status;
+	json.http_code_dot = xhr.status;
 	return json;
     },
 
@@ -1201,6 +1203,7 @@ progress: {
     },
 
     Transfer: function(to, price, CUR) {
+	price=Math.ceil(price);	// 131199999.99999999 ах ты ж сука блять
 	console.log("Transfer: "+to+" "+price+" "+CUR);
 	if(!CUR) CUR=DOT.CUR; var N = DOT.nodes[CUR];
 	if(!N.asset_id) return N.api.tx.balances.transferKeepAlive(to, price); // DOT
@@ -1208,6 +1211,7 @@ progress: {
     },
 
     TransferAll: function(to, bal, CUR) {
+	bal=Math.ceil(bal);
 	if(!CUR) CUR=DOT.CUR; var N = DOT.nodes[CUR], hash=false;
 	if(!N.asset_id) { // Polkadot
 	    hash = N.api.tx.balances.transferAll(to, false);

@@ -9,12 +9,16 @@ class ControllerExtensionPaymentPolkadot extends Controller {
 		    || !isset($this->session->data['payment_method'])
 		) return false;
 		$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-		$data['datas_order_id'] = 1*($this->session->data['order_id']);
-		$data['datas_total'] = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
-                //   $data['datas_total']=($order_info? 1*$order_info["total"] : 'error');
+
+		$data['datas_order'] = $this->session->data['order_id'];
+		$data['datas_total'] = $order_info['total'];
 		$data['datas_currency'] = $order_info['currency_code'];
-		$data['datas_merchant'] = $this->config->get('payment_polkadot_merchant'); // payment_polkadot_security
-		$data['datas_wss'] = $this->config->get('payment_polkadot_engineurl');
+		$data['datas_currences'] = $this->config->get('payment_polkadot_currences');
+
+		// $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
+                //   $data['datas_total']=($order_info? 1*$order_info["total"] : 'error');
+		// $data['datas_merchant'] = $this->config->get('payment_polkadot_merchant'); // payment_polkadot_security
+		// $data['datas_wss'] = $this->config->get('payment_polkadot_engineurl');
 		$data['language'] = $this->config->get('config_language');
                 //   $data['logged'] = $this->customer->isLogged();
                 //   $data['subscription'] = $this->cart->hasSubscription();
@@ -22,7 +26,9 @@ class ControllerExtensionPaymentPolkadot extends Controller {
 		$data['datas_success_callback'] = $this->url->link('checkout/success');             // https://opencart3.zymologia.fi/index.php?route=checkout/success
 		$data['datas_cancel_callback'] = $this->url->link('checkout/checkout', '', true);  // https://opencart3.zymologia.fi/index.php?route=checkout/checkout
 
-		$data['ajax_url'] = HTTP_SERVER . 'index.php?route=extension/payment/polkadot/confirm&user_token='.$this->session->data['user_token'];
+		$data['ajax_url'] = HTTP_SERVER . 'index.php?route=extension/payment/polkadot/confirm&user_token='
+		    .$this->session->data['user_token'];
+
 		return $this->load->view('extension/payment/polkadot', $data);
 	}
 
@@ -45,42 +51,65 @@ class ControllerExtensionPaymentPolkadot extends Controller {
 // ==============================================================
 	public function confirm() {
 
+
+
+
+
+
 	    function json_ok($x,$json) {
 		$x->response->addHeader('Content-Type: text/plain'); // 'Content-Type: application/json'
 	        $x->response->setOutput(json_encode($json));
 	    }
+	    function json_err($x,$err) { json_ok($x,array('error' => $err)); }
 
-	    function json_err($x,$json,$err,$error) {
-        	$json['error'] = $err; $json['error_message'] = 'error';
-		json_ok($x,$json);
+	    $url = $this->config->get('payment_polkadot_engineurl');
+
+	    // S t a t u s
+	    if($_GET['endpoint'] == 'status') {
+    		$r = $this->ajax($url."/v2/status");
+		return json_ok($this,$r);
 	    }
 
-	    $json=[];
-	    // Order ID
-	    if ( ! isset($this->session->data['order_id']) ) return json_err($this, $json, 'order_id', 'error_order');
-	    $json['order_id']=$this->session->data['order_id'];
+
+
+
+
+	    // что у нас есть?
+	    if ( ! isset($this->session->data['order_id']) ) return json_err($this, 'error order');
+	    $order=$this->session->data['order_id'];
+	    if( !$order ) return json_err($this, 'Order not found');
+
 	    $this->load->model('checkout/order');
-	    if (!($order_info = $this->model_checkout_order->getOrder($json['order_id']))) return json_err($this, $json, 'order', 'error_order');
-	    $json['price'] = 1*$order_info["total"]; // price
-	    $url = $this->config->get('payment_polkadot_engineurl'); // url
+	    if (!($order_info = $this->model_checkout_order->getOrder($order))) return json_err($this, 'error order_info');
+	    $amount = $order_info["total"];
+	    $name = $this->config->get('payment_polkadot_shopname');
+	    $currency0 = $order_info['currency_code'];
 
-	    // return json_ok($this,array('error'=>'HUINYA','error_message' => print_r($json,1)  ));
+	    // что нам прислали?
+	    $currency = $_GET['currency'];
 
+	    // Проверяем, разрешен ли
+	    $currences = $this->config->get('payment_polkadot_currences');
+    	    $currences = str_replace(',',' ',$currences);
+    	    $C = ( strpos($currences,' ')<0 ? array($currences) : explode(' ',$currences) );
+            foreach($C as $n=>$c) $C[$n] = trim($c);
+	        if(
+        	    !in_array($currency,$C) // если не разрешено или не соответствует по начальным буквам USD -> USDC
+        	    || $currency0 != substr($currency,0,strlen($currency0))
+    		) json_err($this, 'Currency not allowed');
 
-	    $r = $this->ajax($json,$url); // A J A X
+	    $url.="/v2/order/oc3_".urlencode( (empty($name)?'':$name.'_') . $order );
+
+	    $data = array(
+    		'currency' => $currency,
+    		'amount' => $amount
+	    );
+
+	    $r = $this->ajax($url,$data); // A J A X
 	    if(isset($r['error'])) return json_ok($this,$r);
 
-	    foreach($r as $n=>$l) $json['daemon_'.$n]=$l;
-	        if( !isset($r['order_id']) || $r['order_id'] != $json['order_id']
-                 || !isset($r['price'])   || 1*$r['price']   != 1*$json['price']
-		) return json_err($this, $json, 'response', 'error price or order_id in daemon responce: '
-                    ."price: (".(1*$r['price']).")(".(1*$json['price']).")"
-                    ."order_id: (".($r['order_id']).")(".($json['order_id']).")"
-                    ."json: [".print_r($json,1)."]"
-		   );
-
-	    $this->logs(date("Y-m-d H:i:s")." [".$r['result']."] order:".$json['order_id']." price:".$json['price']." ".$r['pay_account']."\n");
-	    if(isset($r['result']) && $r['result']=='Paid') {
+	    // $this->logs(date("Y-m-d H:i:s")." [".$r['result']."] order:".$order." price:".$amount." ".$r['pay_account']."\n");
+	    if(isset($r['payment_status']) && strtolower($r['payment_status'])=='paid') {
                   //     1       Voided                  Аннулировано........
                   // 2       Processing              В обработке             Передан в печать....
                   //     3       Chargeback              Возврат........
@@ -96,55 +125,39 @@ class ControllerExtensionPaymentPolkadot extends Controller {
                   //     13      Expired                 Просрочено........
                   //     14      Complete                Сделка завершена        Выдан....
         	// $this->model_checkout_order->addHistory($this->session->data['order_id'], $this->config->get('payment_polkadot_approved_status_id'), '', true);
-        	$json['redirect'] = $this->url->link('checkout/success', 'language=' . $this->config->get('config_language'), true);
+
+		// 2 Processing is recommended
+		$this->model_checkout_order->addOrderHistory($order, $this->config->get('payment_polkadot_order_status_id'));
+    		$r['redirect'] = $this->url->link('checkout/success', 'language=' . $this->config->get('config_language'), true);
+		json_ok($this,$r);
 	    }
-	    return json_ok($this,$json);
+	    return json_ok($this,$r);
 	}
 
 
-	function ajax($json,$url) {
+  function ajax($url,$data=false) {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, array(
+        CURLOPT_HTTPHEADER => array('Content-Type:application/json'),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FAILONERROR => true,
+        CURLOPT_CONNECTTIMEOUT => 2, // only spend 3 seconds trying to connect
+        CURLOPT_TIMEOUT => 20 // 30 sec waiting for answer
+    ));
+    if($data) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    }
+    $r = curl_exec($ch);
+    if(curl_errno($ch) || empty($r)) return array( 'error' => "Error: ".curl_error($ch) );
+    $r = (array) json_decode($r);
+    if(empty($r)) return array( 'error' => "Daemon responce error parsing" );
+    // Add the HTTP response code
+    $r['http_code'] = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    return $r;
+  }
 
-	    if(gettype($json)!='string') {
-		$json=json_encode($json,JSON_UNESCAPED_UNICODE);
-		if(empty($json)) return array( 'error' => 'json', 'error_message' => 'Wrong INPUT' );
-	    }
-	    // $json=json_encode(json_decode($json),JSON_UNESCAPED_UNICODE);
-	    $array=(array)json_decode($json);
-
-	    $url.="/order/".$array['order_id']."/price/".$array['price'];
-
-	    $ch = curl_init();
-	    curl_setopt_array($ch, array(
-		// new CURLOPT_POSTFIELDS => $json,
-		// new CURLOPT_HTTPHEADER => array('Content-Type:application/json'),
-		CURLOPT_RETURNTRANSFER => true,
-		CURLOPT_FAILONERROR => true,
-		CURLOPT_CONNECTTIMEOUT => 3, // only spend 3 seconds trying to connect
-		CURLOPT_TIMEOUT => 10, // 30 sec waiting for answer
-		CURLOPT_URL => $url
-	    ));
-	    $result = curl_exec($ch);
-
-	    // return array('error'=>'HUINYA2','error_message' => "url=[$url]<p>result=[$result]"  );
-
-	    if (curl_errno($ch)) return array( 'error' => 'connect', 'error_message' => curl_error($ch) );
-	    $array = (array) json_decode($result);
-
-// Йобаные патчи для kalatori
-if(isset($array['order'])) $array['order_id']=$array['order'];
-if(isset($array['price'])) $array['price']=1*$array['price'];
-if(isset($array['result'])) {
-    if($array['result']=='waiting') $array['result']='Waiting';
-    if($array['result']=='paid') $array['result']='Paid';
-}
-
-	    if(empty($array)) return array( 'error' => 'json', 'error_message' => 'Wrong json format' );
-	    curl_close($ch);
-
-	    if( isset($array['mul']) && $array['mul'] < 20 ) $array['mul']=pow(10, $array['mul']);
-
-	    return $array;
-	}
 
 	// DELETE
 	function logs($s='') {

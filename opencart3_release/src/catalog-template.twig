@@ -1,12 +1,4 @@
-<p>Select your DOT-account <span class="alert text-success" id='dotpay_wallet_finded'></span>
-<div id="WalletID_load" style='display:none'><img src='{{ constant('HTTP_SERVER') }}../catalog/view/theme/default/image/polkadot/ajaxm.gif'> <font color='green'>loading...</font></div>
-<div style='padding-left:30px;' id="WalletID">
-    <label style='display:block;text-align:left;'><input style='margin-right: 5px;' name='dot_addr' type='radio' value='QR'>QR-code</label>
-    <div><input type='button' value='Open my Wallets' onclick='dot_onselect()'></div>
-</div>
-</div>
-<div class="alert text-success" id='dotpay_console'></div>
-<div class="lleotest alert alert-danger" id='dotpay_console_test'></div>
+<div id='polkadot_work'>"Loading engine... If you see this message long enough to read to the end, something has gone wrong.</div>
 
 <form id='form-polkadot' onsubmit='return DOT.opencart3_submit()' method="post">
 <input type='hidden' name='language' value="{{ language }}" />
@@ -16,8 +8,8 @@
 <input type='hidden' name='ajax_url' value='{{ ajax_url }}'>
 <input type='hidden' name='currency' value='{{ datas_currency }}'>
 <input type='hidden' name='merchant' value='{{ datas_merchant }}'>
-    <input type='hidden' name='success_callback' value='{{ datas_success_callback }}'>
-    <input type='hidden' name='cancel_callback' value='{{ datas_cancel_callback }}'>
+<input type='hidden' name='success_callback' value='{{ datas_success_callback }}'>
+<input type='hidden' name='cancel_callback' value='{{ datas_cancel_callback }}'>
 <input type='hidden' name='server' value='{{ constant('HTTP_SERVER') }}'>
 <div class="buttons">
     <div class="pull-right">
@@ -26,62 +18,30 @@
 </div>
 </form>
 
-
 <input type="button" value="reload" onclick="LLOADS.LOADES={};wallet_start();" />
 
 <script>
-
-if(typeof(LLOADS)=='undefined') {
-
-  LLOADS={
-    LOADES: {},
-
-    LOADS: function(u,f,err,sync) { if(typeof(u)=='string') u=[u];
-        var randome='?random='+Math.random();
-        var s;
-        for(var i of u) { if(LLOADS.LOADES[i]) continue;
-         if(/\.css($|\?.+?$)/.test(i)) {
-            s=document.createElement('link');
-            s.type='text/css';
-            s.rel='stylesheet';
-            s.href=i+randome;
-            s.media='screen';
-         } else {
-            s=document.createElement('script');
-            s.type='text/javascript';
-            s.src=i+randome;
-            s.defer=true;
-         }
-         s.setAttribute('orign',i);
-         if(sync) s.async=false;
-         s.onerror=( typeof(err)=='function' ? err : function(e){ alert('Not found: '+e.src); } );
-         s.onload=function(e){ e=e.target;
-            LLOADS.LOADES[e.getAttribute('orign')]=1;
-            var k=1; for(var i of u){
-                if(!LLOADS.LOADES[i]){ k=0; break; }
-            }
-            if(k){ if(f) f(e.src); }
-         };
-         document.getElementsByTagName('head').item(0).appendChild(s);
-        }
-        if(!s) { if(f) f(1); }
-    },
-
-    LOADS_sync: function(u,f,err) { LLOADS.LOADS(u,f,err,1) },
-
-    LOADS_promice: function(file,sync) {
-        return new Promise(function(resolve, reject) { LLOADS.LOADS(file,resolve,reject,sync); });
-    },
-  };
-
-  wallet_start=function(){
-        var path="{{ constant('HTTP_SERVER') }}catalog/view/javascript/polkadot/";
-        LLOADS.LOADS([ path+'DOT.js' ], function(){ DOT.opencart3_run(path); });
-  };
-}
-
-wallet_start();
-
-$('#button-confirm').on('click',function(e){ e.preventDefault(); return DOT.opencart3_submit(); });
-
+    var s=document.createElement('script');
+    s.type='text/javascript';
+    s.src="{{ constant('HTTP_SERVER') }}catalog/view/javascript/polkadot/DOT.js"
+            + '?random='+Math.random() // DEBUG ONLY!
+    ;
+    s.onerror=function(e){ alert('DOT plugin: script not found: '+e.src) };
+    s.onload=function(e) {
+        DOT.opencart3_init({
+	    order: "{{ datas_order }}",
+	    total: "{{ datas_total }}",
+	    currency: "{{ datas_currency }}",
+	    currences: "{{ datas_currences }}",
+	    ajax_url: "{{ ajax_url }}",
+	    wpath: "{{ constant('HTTP_SERVER') }}",
+	    language: "{{ language }}",
+	    success_callback: "{{ datas_success_callback }}",
+	    cancel_callback: "{{ datas_cancel_callback }}",
+	    class_ok: "alert text-success",
+	    class_warning: "lleotest alert alert-danger",
+        });
+    };
+    document.getElementsByTagName('head').item(0).appendChild(s);
+    $('#button-confirm').on('click',function(e){ e.preventDefault(); return DOT.opencart3_submit(); });
 </script>

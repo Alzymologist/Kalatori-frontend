@@ -31,30 +31,27 @@ class ControllerExtensionPaymentPolkadot extends Controller {
 			'href' => $this->url->link('extension/payment/polkadot', 'user_token=' . $this->session->data['user_token'], true)
 		    );
 
+
+		$this->load->model('localisation/order_status'); $data['order_statuses'] = $this->model_localisation_order_status->getOrderStatuses();
+
 		$data['action'] = $this->url->link('extension/payment/polkadot', 'user_token=' . $this->session->data['user_token'], true);
 		$data['cancel'] = $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=payment', true);
 
 		$a=array(
-		//	'payment_polkadot_merchant',
-		//	'payment_polkadot_security',
+			'payment_polkadot_shopname',
+			'payment_polkadot_currences',
 			'payment_polkadot_engineurl',
-		//	'payment_polkadot_total',
 			'payment_polkadot_order_status_id',
-		//	'payment_polkadot_geo_zone_id',
 			'payment_polkadot_status',
-		//	'payment_polkadot_sort_order'
 		);
 		foreach($a as $l) $data[$l] = (isset($this->request->post[$l]) ? $this->request->post[$l] : $this->config->get($l) );
-
-		$data['callback'] = HTTP_CATALOG . 'index.php?route=extension/payment/polkadot/callback';
-
-		$this->load->model('localisation/order_status'); $data['order_statuses'] = $this->model_localisation_order_status->getOrderStatuses();
-		$this->load->model('localisation/geo_zone'); $data['geo_zones'] = $this->model_localisation_geo_zone->getGeoZones();
 
 		$a=array('header','column_left','footer');
 		foreach($a as $l) $data[$l] = $this->load->controller('common/'.$l);
 
-		$data['test_alive_url'] = HTTP_SERVER . 'index.php?route=extension/payment/polkadot/test_alive&user_token='.$this->session->data['user_token'];
+		$data['callback'] 	= HTTP_CATALOG . 'index.php?route=extension/payment/polkadot/callback';
+		$data['test_alive_url'] = HTTP_SERVER  . 'index.php?route=extension/payment/polkadot/test_alive&user_token='.$this->session->data['user_token'];
+
 		$this->response->setOutput($this->load->view('extension/payment/polkadot', $data));
 	}
 
@@ -66,41 +63,26 @@ class ControllerExtensionPaymentPolkadot extends Controller {
 	}
 
         public function test_alive(): void {
-                // $url = $this->config->get('payment_polkadot_engineurl');
-                $url=$this->request->post['engine_url'];
-                $json=$this->test_url($url);
-                $this->response->addHeader('Content-Type: application/json');
-                $this->response->setOutput(json_encode($json));
-                return;
-        }
-
-        function test_url($url) {
-                $ch = curl_init();
-                curl_setopt_array($ch, array(
-                    // new CURLOPT_POSTFIELDS => '{"order_id":0,"price":0.0}',
-                    // new CURLOPT_HTTPHEADER => array('Content-Type:application/json'),
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_FAILONERROR => true,
-                    CURLOPT_CONNECTTIMEOUT => 2,
-                    CURLOPT_TIMEOUT => 3,
-                    CURLOPT_URL => $url."/order/0/price/0" // new
-                ));
-                $result = curl_exec($ch);
-                $errors = curl_error($ch);
-                curl_close($ch);
-                $json=[];
-                if($result) { $J=json_decode($result); if($J) $J=(array)$J; }
-                if($result===false || !empty($errors) || !$J || !isset($J['version'])) {
-                    $json['error']="Connection error ".htmlspecialchars($url);
-                    $json['error_message']=print_r($errors,1);
-                } else {
-                    $json['version']=htmlspecialchars($J['version']);
-                    $json['info']=$J;
-                };
-                $json['URL']=$url;
-                $json['OUTPUT']=$result;
-                $json['ERROR']=print_r($errors,1);
-                return $json;
+	    // S t a t u s
+	    $ch = curl_init( $this->config->get('payment_polkadot_engineurl') . "/v2/status" );
+	    curl_setopt_array($ch, array(
+	        CURLOPT_HTTPHEADER => array('Content-Type:application/json'),
+	        CURLOPT_RETURNTRANSFER => true,
+	        CURLOPT_FAILONERROR => true,
+	        CURLOPT_CONNECTTIMEOUT => 2, // only spend 3 seconds trying to connect
+	        CURLOPT_TIMEOUT => 2 // 30 sec waiting for answer
+	    ));
+	    $r = curl_exec($ch);
+	    if(curl_errno($ch) || empty($r)) $r=array("error"=>"Daemon responce empty: ".curl_error($ch));
+	    else {
+		$r = (array)json_decode($r);
+		if(empty($r)) $r = array("error"=>"Daemon responce error parsing");
+	    }
+	    $r['http_code'] = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+	    curl_close($ch);
+            $this->response->addHeader('Content-Type: application/json');
+            $this->response->setOutput(json_encode($r));
+            return;
         }
 
 }

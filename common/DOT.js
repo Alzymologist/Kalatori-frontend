@@ -493,9 +493,10 @@ magento_init: function(cx) {
 
     var p = window.checkoutConfig.payment.kalatorimax;
     if(!p) DOT.error('magento system error #0104');
+    DOT.cx.currences = p.currences;
     DOT.cx.mainjs = p.assets_base_url+"/"; // "https://magento.zymologia.fi/static/version1709653373/frontend/Magento/luma/en_US/Alzymologist_KalatoriMax/js"
     DOT.cx.ajax_url = p.store_base_url+"alzymologist/payment/index"; // 'https://magento.zymologia.fi/alzymologist/payment/index'; // window.checkoutConfig.staticBaseUrl
-    DOT.health_url = DOT.cx.ajax_url+"?health=1";
+    // DOT.health_url = DOT.cx.ajax_url+"?health=1";
 
     DOT.onpaid=function() {
 	DOT.do_button_on();
@@ -509,7 +510,7 @@ magento_init: function(cx) {
         );
     };
 
-    DOT.init();
+    DOT.design();
 },
 
 opencart3_init: function(cx) {

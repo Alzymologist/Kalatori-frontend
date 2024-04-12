@@ -158,14 +158,16 @@ function polkadot_callback( $order_pointer ) {
     // что нам прислали?
 	$currency = $_GET['currency'];
 
-    // Проверяем, разрешен ли
-	$currences = str_replace(',',' ',$currences);
-	$C = ( strpos($currences,' ')<0 ? array($currences) : explode(' ',$currences) );
-	foreach($C as $n=>$c) $C[$n] = trim($c);
-	if(
-    	    !in_array($currency,$C) // если не разрешено или не соответствует по начальным буквам USD -> USDC
-    	    || $currency0 != substr($currency,0,strlen($currency0))
-	) ejdie('Currency not allowed');
+        // Проверяем, разрешен ли
+        if(!empty($currences)) {
+            $currences = str_replace(',',' ',$currences);
+            $C = ( strpos($currences,' ')<0 ? array($currences) : explode(' ',$currences) );
+            foreach($C as $n=>$c) $C[$n] = trim($c);
+            if(!in_array($currency,$C)) ejdie('Currency not in list');
+        }
+        if($currency0 != substr($currency,0,strlen($currency0))) ejdie('Currency not found');
+
+
 
     $daemon_url.="/v2/order/wc_".urlencode($store_name."_".$hash."_".$order."_".$user_id);
     // A J A X

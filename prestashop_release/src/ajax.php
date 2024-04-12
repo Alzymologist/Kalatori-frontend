@@ -53,24 +53,24 @@ class Ps_DotpaymentAjaxModuleFrontController extends ModuleFrontController
     $input = (array)json_decode( file_get_contents("php://input") );
     $currency = $input['currency'];
 
-    // Проверяем, разрешен ли
-    $curs = Configuration::get('DOT_CURRENCES'); $curs = str_replace(',',' ',$curs);
-    $C = ( strpos($curs,' ')<0 ? array($curs) : explode(' ',$curs) );
-    foreach($C as $n=>$c) $C[$n] = trim($c);
-
-    if(
-	!in_array($currency,$C) // если не разрешено или не соответствует по начальным буквам USD -> USDC
-	|| $currency0 != substr($currency,0,strlen($currency0))
-    ) $this->ejdie('Currency not allowed');
+        // Проверяем, разрешен ли
+        $currences = Configuration::get('DOT_CURRENCES');
+        if(!empty($currences)) {
+            $currences = str_replace(',',' ',$currences);
+            $C = ( strpos($currences,' ')<0 ? array($currences) : explode(' ',$currences) );
+            foreach($C as $n=>$c) $C[$n] = trim($c);
+            if(!in_array($currency,$C)) $this->ejdie('Currency not in list');
+        }
+        if($currency0 != substr($currency,0,strlen($currency0))) $this->ejdie('Currency not found');
 
     $name = Configuration::get('DOT_NAME'); if(empty($name)) $name='PrestaShop';
     $url = Configuration::get('DOT_URL'); if(empty($url)) $url='http://localhost:16726';
-    $url.="/v2/order/ps_".urlencode($name).'_'.$order;
+    $url.="/v2/order/ps_".urlencode($name.'_'.$order);
 
     // A J A X
     $data = array(
 	'currency' => $input['currency'],
-	'order' => $order,
+	// 'order' => $order,
 	'amount' => $amount
     );
     $r = $this->ajax($url,$data);

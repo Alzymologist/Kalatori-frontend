@@ -88,15 +88,16 @@ class ControllerExtensionPaymentPolkadot extends Controller {
 	    // что нам прислали?
 	    $currency = $_GET['currency'];
 
-	    // Проверяем, разрешен ли
-	    $currences = $this->config->get('payment_polkadot_currences');
-    	    $currences = str_replace(',',' ',$currences);
-    	    $C = ( strpos($currences,' ')<0 ? array($currences) : explode(' ',$currences) );
+        // Проверяем, разрешен ли
+        $currences = $this->config->get('payment_polkadot_currences');
+        if(!empty($currences)) {
+            $currences = str_replace(',',' ',$currences);
+            $C = ( strpos($currences,' ')<0 ? array($currences) : explode(' ',$currences) );
             foreach($C as $n=>$c) $C[$n] = trim($c);
-	        if(
-        	    !in_array($currency,$C) // если не разрешено или не соответствует по начальным буквам USD -> USDC
-        	    || $currency0 != substr($currency,0,strlen($currency0))
-    		) json_err($this, 'Currency not allowed');
+            if(!in_array($currency,$C)) json_err($this, 'Currency not in list');
+        }
+        if($currency0 != substr($currency,0,strlen($currency0))) json_err($this, 'Currency not found');
+
 
 	    $url.="/v2/order/oc3_".urlencode( (empty($name)?'':$name.'_') . $order );
 

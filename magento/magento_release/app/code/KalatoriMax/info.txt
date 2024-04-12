@@ -1,0 +1,18 @@
+Памятка команд
+
+# Enabled developer mode.
+
+/home/WWW/shop-Magento/www/bin/magento deploy:mode:set developer
+
+# Flush cache
+
+/home/WWW/shop-Magento/www/bin/magento cache:flush
+
+# неведомая хуйня
+
+/home/WWW/shop-Magento/www/bin/magento setup:static-content:deploy -f
+
+# неведомая хуйня setup:di:compile
+
+/home/WWW/shop-Magento/www/bin/magento s:d:c
+

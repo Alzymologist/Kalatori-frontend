@@ -1040,10 +1040,7 @@ waitManual: {
 
 		if( DOT.flag.end ) return DOT.waitManual.stop();
 
-		if(    !DOT.cx.pay_acc
-		    || !DOT.cx.my_acc
-		    || !DOT.api
-		) {
+		if(!DOT.cx.pay_acc) {
 		    // console.log("waitManual");
 		    return; // если нету платежного аккаунта или не выбран свой
 		}
@@ -2615,4 +2612,3 @@ kalatori_donate = async function(ara) { if(!ara) ara={};
     DOT.design();
     // DOT.init();
 };
-
